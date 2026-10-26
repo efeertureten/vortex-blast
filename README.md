@@ -21,3 +21,4 @@ Desktop shortcuts: **Space** start · **U** upgrades · **M** mute.
   - Bomb Threshold: 6 → 5 → 4 blocks
   - Gem & Score Boost: up to x3.5
 - **Adaptive quality**: drops pixel density and then the background swirl if a device can't hold ~48 fps
+- **Block sprite cache**: resting blocks are pre-rasterised per ring/colour at device resolution and blitted, so only moving blocks build vector paths each frame

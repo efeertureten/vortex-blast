@@ -1,0 +1,725 @@
+<title>Vortex Blast Kontrol Paneli</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Rubik:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: sticky header + tab rail; each tab is a stack of panels on a 12-col auto-fit grid. */
+:root{
+  --bg:#f5f3fb; --panel:#ffffff; --ink:#1d1736; --muted:#666085; --line:#e2deef; --soft:#efebfa;
+  --accent:#6a3cf0; --accent-ink:#ffffff; --asbuilt:#b9b2d3;
+  --red:#e2344d; --blue:#2c7be5; --yellow:#d99a00; --green:#1f9d48;
+  --ok:#1b8a43; --warn:#b77400; --bad:#cf2a40;
+  --ok-bg:#e3f5e9; --warn-bg:#fdf0d6; --bad-bg:#fde3e7;
+  --f-display:'Lilita One','Arial Rounded MT Bold',Impact,sans-serif;
+  --f-body:'Rubik',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+  --r:12px; --gap:16px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --bg:#100b22; --panel:#1a1433; --ink:#efebff; --muted:#a69fc8; --line:#2d2650; --soft:#231c42;
+  --accent:#a58cff; --accent-ink:#140d2c; --asbuilt:#4c4475;
+  --red:#ff5d72; --blue:#5aa2ff; --yellow:#ffc53d; --green:#46d06f;
+  --ok:#55d684; --warn:#f2b442; --bad:#ff6b7e;
+  --ok-bg:#163526; --warn-bg:#3a2c0e; --bad-bg:#3d1621;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#100b22; --panel:#1a1433; --ink:#efebff; --muted:#a69fc8; --line:#2d2650; --soft:#231c42;
+  --accent:#a58cff; --accent-ink:#140d2c; --asbuilt:#4c4475;
+  --red:#ff5d72; --blue:#5aa2ff; --yellow:#ffc53d; --green:#46d06f;
+  --ok:#55d684; --warn:#f2b442; --bad:#ff6b7e;
+  --ok-bg:#163526; --warn-bg:#3a2c0e; --bad-bg:#3d1621;
+}
+
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1280px;margin-inline:auto}
+h1,h2,h3{text-wrap:balance;margin:0}
+a{color:var(--accent)}
+code,.mono{font-family:var(--f-mono);font-size:.82em}
+.num{font-variant-numeric:tabular-nums}
+
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:18px 0;border-bottom:1px solid var(--line)}
+.titlerow{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 18px}
+.titlerow h1{font:400 clamp(26px,4vw,36px)/1.05 var(--f-display);letter-spacing:.01em}
+.titlerow h1 span{color:var(--accent)}
+.meta{color:var(--muted);font-size:13px}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;margin-top:14px;scrollbar-width:none}
+nav.tabs button{font:500 14px var(--f-body);color:var(--muted);background:none;border:0;border-bottom:3px solid transparent;
+  padding:8px 12px 10px;cursor:pointer;white-space:nowrap}
+nav.tabs button:hover{color:var(--ink)}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+nav.tabs button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+main section.tab{display:none;padding-top:22px}
+main section.tab.on{display:grid;gap:var(--gap)}
+.lede{font-size:16px;max-width:70ch;color:var(--ink)}
+.lede b{font-weight:600}
+.grid{display:grid;gap:var(--gap);grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr))}
+.grid.wide{grid-template-columns:repeat(auto-fit,minmax(min(100%,34rem),1fr))}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;min-width:0}
+.panel h2{font:600 16px var(--f-body);margin-bottom:2px}
+.panel .note{color:var(--muted);font-size:13px;margin:0 0 12px}
+.sechead{font:400 22px var(--f-display);margin-top:10px}
+
+/* finding cards: severity stripe on the left edge encodes state */
+.finding{position:relative;padding-left:22px}
+.finding::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:5px;border-radius:3px;background:var(--bad)}
+.finding.ok::before{background:var(--ok)} .finding.warn::before{background:var(--warn)}
+.finding h3{font:600 15px var(--f-body)}
+.ba{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:10px 0 6px}
+.ba .big{font:400 34px/1 var(--f-display)}
+.ba .arrow{color:var(--muted)}
+.ba .after{font:400 34px/1 var(--f-display);color:var(--accent)}
+.ba small{color:var(--muted);font-size:12px;display:block}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:2px 9px;border-radius:999px;background:var(--soft);color:var(--ink);white-space:nowrap}
+.chip.ok{background:var(--ok-bg);color:var(--ok)} .chip.warn{background:var(--warn-bg);color:var(--warn)} .chip.bad{background:var(--bad-bg);color:var(--bad)}
+.chip.ph{font-family:var(--f-mono);font-size:11px}
+
+.status{display:flex;flex-wrap:wrap;gap:10px 28px;align-items:center}
+.status .k{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+.status .v{font:400 26px/1.1 var(--f-display)}
+
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em;background:var(--panel);position:sticky;top:0;z-index:1}
+td.r,th.r{text-align:right}
+.scroll{overflow:auto;max-height:560px;border-radius:8px}
+.scroll.x{max-height:none}
+th button{all:unset;cursor:pointer}
+th button:hover{color:var(--ink)}
+th[aria-sort="ascending"] button::after{content:" ↑"} th[aria-sort="descending"] button::after{content:" ↓"}
+tr.rowlink{cursor:pointer} tr.rowlink:hover td{background:var(--soft)}
+tr.detail td{background:var(--soft);font-size:13px}
+.detail dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:0}
+.detail dt{color:var(--muted);font-weight:500}
+.detail dd{margin:0}
+.ricebar{display:flex;align-items:center;gap:8px}
+.ricebar i{display:block;height:8px;border-radius:4px;background:var(--accent);min-width:2px}
+
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.controls input,.controls select{font:14px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+.controls input{flex:1 1 200px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{font:500 13px var(--f-body);background:var(--bg);color:var(--muted);border:0;padding:7px 11px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+
+ul.clean{margin:0;padding-left:18px} ul.clean li{margin:4px 0}
+ol.findings{margin:0;padding-left:22px} ol.findings li{margin:6px 0}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.chart{position:relative;width:100%}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart text{fill:var(--muted);font:12px var(--f-body)}
+.chart .lbl{fill:var(--ink);font-weight:500}
+.chart .grid line{stroke:var(--line)}
+.chart .axis{stroke:var(--muted)}
+.tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  box-shadow:0 6px 20px rgb(0 0 0 / .15);padding:6px 9px;font-size:12px;white-space:nowrap;opacity:0;transition:opacity .1s;z-index:3}
+.tip b{display:block;color:var(--muted);font-weight:500}
+
+.matrix{display:grid;grid-template-columns:auto repeat(5,1fr);gap:3px;font-size:12px}
+.matrix .cell{min-height:52px;border-radius:6px;padding:4px;display:flex;flex-wrap:wrap;gap:3px;align-content:flex-start}
+.matrix .ax{color:var(--muted);display:flex;align-items:center;justify-content:center}
+.matrix .chip{font-family:var(--f-mono);font-size:11px;background:var(--panel)}
+.adr{display:grid;gap:10px}
+.adr div{border-top:1px solid var(--line);padding-top:10px}
+.adr div:first-child{border-top:0;padding-top:0}
+.adr .q{font-weight:600}
+.foot{color:var(--muted);font-size:12px;margin-top:28px}
+@media (prefers-reduced-motion:no-preference){.bar-in{animation:grow .5s cubic-bezier(.2,.7,.2,1) both}@keyframes grow{from{transform:scaleY(0)}}}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <div class="titlerow">
+    <h1>Vortex Blast <span>Kontrol Paneli</span></h1>
+    <div class="meta" id="meta"></div>
+  </div>
+  <nav class="tabs" role="tablist" aria-label="Bölümler">
+    <button role="tab" id="t-ozet" data-tab="ozet" aria-selected="true">Özet</button>
+    <button role="tab" id="t-denge" data-tab="denge" aria-selected="false">Denge</button>
+    <button role="tab" id="t-ekonomi" data-tab="ekonomi" aria-selected="false">Ekonomi</button>
+    <button role="tab" id="t-backlog" data-tab="backlog" aria-selected="false">Backlog</button>
+    <button role="tab" id="t-yol" data-tab="yol" aria-selected="false">Yol haritası</button>
+    <button role="tab" id="t-arastirma" data-tab="arastirma" aria-selected="false">Araştırma</button>
+  </nav>
+</header>
+
+<main>
+<!-- ===================== ÖZET ===================== -->
+<section class="tab on" id="ozet" role="tabpanel" aria-labelledby="t-ozet">
+  <div class="panel status" id="statusbar"></div>
+  <p class="lede" id="ozet-lede"></p>
+  <div class="grid" id="findings"></div>
+  <div class="grid">
+    <div class="panel">
+      <h2 id="s1-title">Sıradaki iş</h2>
+      <p class="note" id="s1-note"></p>
+      <div class="scroll x"><table id="s1-table"></table></div>
+    </div>
+    <div class="panel">
+      <h2>KPI hedefleri</h2>
+      <p class="note">Soft-launch ve web kohortu için hedef çıpaları. Kaynak kodları Araştırma sekmesinde.</p>
+      <table id="kpi-table"></table>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>Go / No-Go kapıları</h2>
+    <p class="note">Her fazın sonunda verilecek kararlar.</p>
+    <div class="scroll x"><table id="gates-table"></table></div>
+  </div>
+</section>
+
+<!-- ===================== DENGE ===================== -->
+<section class="tab" id="denge" role="tabpanel" aria-labelledby="t-denge">
+  <p class="lede">Oyunun kurallarının Python kopyası üç oyuncu botuyla oynatıldı. Sol tarafta oyunun şu anki hâli, sağda önerilen ayar seti. Çubuklar medyan run süresi, çizgiler p10–p90 aralığı.</p>
+  <div class="panel">
+    <h2>Run süresi: as-built ve öneri</h2>
+    <p class="note">Bot başına 100 run (skilled 20). 900 sn simülasyon tavanı, oraya ulaşan run "hiç ölmüyor" demek.</p>
+    <div class="legend"><span><i style="background:var(--asbuilt)"></i>As-built</span><span><i style="background:var(--accent)"></i>Öneri</span><span><i style="background:var(--ok);opacity:.25"></i>Hedef bant 90–180 sn (casual)</span></div>
+    <div class="chart" id="c-dur"></div>
+  </div>
+  <div class="grid wide">
+    <div class="panel">
+      <h2>Dalga başına drain ve başabaş hız</h2>
+      <p class="note">Drain dalga 13'te %20/sn'de sabitleniyor. Başabaş, stabiliteyi korumak için saniyede gereken blast sayısı (casual bot ortalaması 1,03).</p>
+      <div class="legend"><span><i style="background:var(--red)"></i>Drain %/sn</span><span><i style="background:var(--blue)"></i>Başabaş blast/sn ×10</span></div>
+      <div class="chart" id="c-drain"></div>
+    </div>
+    <div class="panel">
+      <h2>Casual bot: hangi dalgaya kadar yaşıyor</h2>
+      <p class="note">200 run'dan kaçının o dalgaya ulaştığı. Ölüm spirali dalga 11–13'te başlıyor.</p>
+      <div class="chart" id="c-reach"></div>
+    </div>
+  </div>
+  <div class="grid wide">
+    <div class="panel">
+      <h2>Tespit edilen sorunlar</h2>
+      <p class="note">Model kanıtıyla, GDD §3.4.</p>
+      <table id="issues-table"></table>
+    </div>
+    <div class="panel">
+      <h2>Önerilen ayarlar</h2>
+      <p class="note">GDD §3.5. Backlog F-019 ve F-044.</p>
+      <table id="params-table"></table>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>Öneri sonuç kontrolü</h2>
+    <p class="note">Her satır as-built ve öneri ayarının aynı bot ve upgrade setindeki sonucunu karşılaştırır.</p>
+    <div class="scroll x"><table id="tuning-table"></table></div>
+  </div>
+</section>
+
+<!-- ===================== EKONOMİ ===================== -->
+<section class="tab" id="ekonomi" role="tabpanel" aria-labelledby="t-ekonomi">
+  <p class="lede" id="eko-lede"></p>
+  <div class="grid wide">
+    <div class="panel">
+      <h2>Upgrade maliyetleri</h2>
+      <p class="note">Her parça bir seviye. Uzunluk toplam gem maliyeti.</p>
+      <div class="chart" id="c-cost"></div>
+    </div>
+    <div class="panel">
+      <h2>Bütün upgrade'leri bitirmek için gereken run</h2>
+      <p class="note">Oyuncu her run sonunda alabildiği en ucuz upgrade'i alıyor (varsayım). Medyan, 6–12 tohum.</p>
+      <div class="legend"><span><i style="background:var(--asbuilt)"></i>As-built</span><span><i style="background:var(--accent)"></i>Öneri</span></div>
+      <div class="chart" id="c-prog"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>Run simülasyonu, as-built</h2>
+    <p class="note">3 bot × 3 upgrade seti (none = 0/0/0, mid = 2/1/4, max = 5/2/10). Skilled 40 run, diğerleri 200.</p>
+    <div class="scroll x"><table id="sim-table"></table></div>
+  </div>
+</section>
+
+<!-- ===================== BACKLOG ===================== -->
+<section class="tab" id="backlog" role="tabpanel" aria-labelledby="t-backlog">
+  <div class="grid">
+    <div class="panel">
+      <h2>Faza göre iş yükü</h2>
+      <p class="note">Kişi-gün (1 kişi-gün = 8 saat). Later grubu kapasite nedeniyle plandan kesildi.</p>
+      <div class="chart" id="c-phase"></div>
+    </div>
+    <div class="panel">
+      <h2>Kategoriye göre özellik sayısı</h2>
+      <p class="note">44 özellik, 15 kategori.</p>
+      <div class="chart" id="c-cat"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>Özellikler</h2>
+    <p class="note">Ayrıntı için bir satıra tıkla. Başlıklara tıklayarak sırala.</p>
+    <div class="controls">
+      <input id="bl-search" type="search" placeholder="Ara: ad, fonksiyon, KPI…" aria-label="Backlog'da ara">
+      <div class="seg" id="bl-phase" role="group" aria-label="Faz filtresi"></div>
+      <select id="bl-cat" aria-label="Kategori filtresi"><option value="">Tüm kategoriler</option></select>
+    </div>
+    <div class="scroll"><table id="bl-table"></table></div>
+  </div>
+</section>
+
+<!-- ===================== YOL HARİTASI ===================== -->
+<section class="tab" id="yol" role="tabpanel" aria-labelledby="t-yol">
+  <div class="panel status" id="cap-status"></div>
+  <div class="panel">
+    <h2>Takvim</h2>
+    <p class="note">Koyu çubuk geliştirme, açık çubuk ölçüm penceresi. Dikey çizgi bugünü gösteriyor.</p>
+    <div class="chart" id="c-gantt"></div>
+  </div>
+  <div class="grid wide" id="sprints"></div>
+  <div class="grid wide">
+    <div class="panel">
+      <h2>Risk matrisi</h2>
+      <p class="note">Olasılık × etki (1–5). Kırmızı alan skoru 12 ve üzeri.</p>
+      <div class="matrix" id="matrix"></div>
+    </div>
+    <div class="panel">
+      <h2>Riskler ve azaltma</h2>
+      <p class="note">Skora göre sıralı.</p>
+      <div class="scroll"><table id="risk-table"></table></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>Mimari kararlar</h2>
+    <p class="note">GDD §11.6'daki 5 karar kaydı.</p>
+    <div class="adr" id="adrs"></div>
+  </div>
+</section>
+
+<!-- ===================== ARAŞTIRMA ===================== -->
+<section class="tab" id="arastirma" role="tabpanel" aria-labelledby="t-arastirma">
+  <div class="grid wide">
+    <div class="panel">
+      <h2>Pazar özeti</h2>
+      <p class="note">00_RESEARCH.md yönetici özeti. Kaynak kodları en alttaki tabloda.</p>
+      <ol class="findings" id="summary15"></ol>
+    </div>
+    <div class="panel">
+      <h2>Kod hipotezleri</h2>
+      <p class="note">14 hipotez, oyun kodunda kanıtla kontrol edildi.</p>
+      <div class="scroll"><table id="hyp-table"></table></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>Benchmark metrikler</h2>
+    <p class="note">Kaynaklar çoğunlukla vendor içeriği. Güvenilirlik sütununa bakarak oku.</p>
+    <div class="scroll x"><table id="bench-table"></table></div>
+  </div>
+  <div class="grid wide">
+    <div class="panel">
+      <h2>Varsayımlar</h2>
+      <p class="note">Doğrulanamayan ve ölçümle güncellenecek kabuller.</p>
+      <div class="scroll"><table id="assume-table"></table></div>
+    </div>
+    <div class="panel">
+      <h2>Kaynaklar</h2>
+      <p class="note">31 kaynak, erişim 2026-10-26.</p>
+      <div class="scroll"><table id="src-table"></table></div>
+    </div>
+  </div>
+</section>
+</main>
+<p class="foot" id="foot"></p>
+</div>
+
+<script>
+(() => {
+'use strict';
+const D = {"generated": "2026-10-26 13:17", "today": "2026-10-26", "hash": {"index.html": "54B2226450B198F4", "README.md": "E4A496C2B4C157B7"}, "upgradeCosts": [{"key": "magnet", "step": "0 → 1", "cost": 40.0, "cum": 40.0}, {"key": "magnet", "step": "1 → 2", "cost": 72.0, "cum": 112.0}, {"key": "magnet", "step": "2 → 3", "cost": 130.0, "cum": 242.0}, {"key": "magnet", "step": "3 → 4", "cost": 233.0, "cum": 475.0}, {"key": "magnet", "step": "4 → 5", "cost": 420.0, "cum": 895.0}, {"key": "bomb", "step": "0 → 1", "cost": 120.0, "cum": 120.0}, {"key": "bomb", "step": "1 → 2", "cost": 360.0, "cum": 480.0}, {"key": "mult", "step": "0 → 1", "cost": 50.0, "cum": 50.0}, {"key": "mult", "step": "1 → 2", "cost": 78.0, "cum": 128.0}, {"key": "mult", "step": "2 → 3", "cost": 120.0, "cum": 248.0}, {"key": "mult", "step": "3 → 4", "cost": 186.0, "cum": 434.0}, {"key": "mult", "step": "4 → 5", "cost": 289.0, "cum": 723.0}, {"key": "mult", "step": "5 → 6", "cost": 447.0, "cum": 1170.0}, {"key": "mult", "step": "6 → 7", "cost": 693.0, "cum": 1863.0}, {"key": "mult", "step": "7 → 8", "cost": 1075.0, "cum": 2938.0}, {"key": "mult", "step": "8 → 9", "cost": 1666.0, "cum": 4604.0}, {"key": "mult", "step": "9 → 10", "cost": 2582.0, "cum": 7186.0}], "upgradeTotal": 8561.0, "sim": [{"cfg": "none", "bot": "novice", "runs": 200.0, "dur": 84.0, "p10": 65.0, "p90": 104.0, "capped": 0.0, "wave": 8.0, "score": 28662.0, "gems": 134.1, "gemsMin": 96.0, "bps": 0.69, "avgN": 4.23, "bombs": 7.0, "combo": 26.0}, {"cfg": "none", "bot": "casual", "runs": 200.0, "dur": 121.0, "p10": 96.0, "p90": 163.0, "capped": 0.0, "wave": 13.0, "score": 85472.0, "gems": 346.2, "gemsMin": 164.3, "bps": 1.03, "avgN": 4.62, "bombs": 22.0, "combo": 123.5}, {"cfg": "none", "bot": "skilled", "runs": 40.0, "dur": 900.0, "p10": 900.0, "p90": 900.0, "capped": 100.0, "wave": 53.0, "score": 1393743.0, "gems": 4671.9, "gemsMin": 311.5, "bps": 1.62, "avgN": 5.52, "bombs": 418.5, "combo": 1460.0}, {"cfg": "mid", "bot": "novice", "runs": 200.0, "dur": 57.0, "p10": 47.0, "p90": 68.0, "capped": 0.0, "wave": 10.0, "score": 52514.0, "gems": 224.5, "gemsMin": 235.9, "bps": 0.69, "avgN": 4.65, "bombs": 9.0, "combo": 24.0}, {"cfg": "mid", "bot": "casual", "runs": 200.0, "dur": 180.0, "p10": 91.0, "p90": 336.0, "capped": 0.0, "wave": 27.0, "score": 364023.0, "gems": 1406.9, "gemsMin": 405.7, "bps": 1.03, "avgN": 5.32, "bombs": 58.0, "combo": 183.5}, {"cfg": "mid", "bot": "skilled", "runs": 40.0, "dur": 900.0, "p10": 900.0, "p90": 900.0, "capped": 100.0, "wave": 87.0, "score": 3800318.0, "gems": 12099.3, "gemsMin": 806.6, "bps": 1.62, "avgN": 6.87, "bombs": 677.5, "combo": 1459.0}, {"cfg": "max", "bot": "novice", "runs": 200.0, "dur": 43.0, "p10": 36.0, "p90": 54.0, "capped": 0.0, "wave": 12.0, "score": 76781.0, "gems": 344.0, "gemsMin": 463.3, "bps": 0.69, "avgN": 4.94, "bombs": 10.0, "combo": 19.0}, {"cfg": "max", "bot": "casual", "runs": 200.0, "dur": 671.0, "p10": 324.0, "p90": 900.0, "capped": 29.0, "wave": 75.0, "score": 2820723.0, "gems": 8715.3, "gemsMin": 807.2, "bps": 1.03, "avgN": 5.87, "bombs": 286.0, "combo": 686.0}, {"cfg": "max", "bot": "skilled", "runs": 40.0, "dur": 900.0, "p10": 900.0, "p90": 900.0, "capped": 100.0, "wave": 122.0, "score": 7416581.0, "gems": 22990.0, "gemsMin": 1532.6, "bps": 1.62, "avgN": 7.72, "bombs": 728.0, "combo": 1459.5}], "waves": [{"wave": 1.0, "need": 1000.0, "cum": 1000.0, "drain": 7.0, "speed": 1.0, "breakeven": 0.46, "tMed": 4.3, "reached": 200.0, "death": 0.0}, {"wave": 2.0, "need": 2000.0, "cum": 3000.0, "drain": 8.15, "speed": 1.07, "breakeven": 0.54, "tMed": 3.1, "reached": 200.0, "death": 0.0}, {"wave": 3.0, "need": 3000.0, "cum": 6000.0, "drain": 9.3, "speed": 1.14, "breakeven": 0.62, "tMed": 4.2, "reached": 200.0, "death": 0.0}, {"wave": 4.0, "need": 4000.0, "cum": 10000.0, "drain": 10.45, "speed": 1.21, "breakeven": 0.69, "tMed": 5.0, "reached": 200.0, "death": 0.0}, {"wave": 5.0, "need": 5000.0, "cum": 15000.0, "drain": 11.6, "speed": 1.28, "breakeven": 0.77, "tMed": 5.9, "reached": 200.0, "death": 0.0}, {"wave": 6.0, "need": 6000.0, "cum": 21000.0, "drain": 12.75, "speed": 1.35, "breakeven": 0.85, "tMed": 7.7, "reached": 200.0, "death": 0.0}, {"wave": 7.0, "need": 7000.0, "cum": 28000.0, "drain": 13.9, "speed": 1.42, "breakeven": 0.92, "tMed": 8.4, "reached": 200.0, "death": 0.0}, {"wave": 8.0, "need": 8000.0, "cum": 36000.0, "drain": 15.05, "speed": 1.49, "breakeven": 1.0, "tMed": 10.0, "reached": 200.0, "death": 0.0}, {"wave": 9.0, "need": 9000.0, "cum": 45000.0, "drain": 16.2, "speed": 1.56, "breakeven": 1.07, "tMed": 11.2, "reached": 200.0, "death": 0.0}, {"wave": 10.0, "need": 10000.0, "cum": 55000.0, "drain": 17.35, "speed": 1.56, "breakeven": 1.15, "tMed": 11.9, "reached": 200.0, "death": 0.0}, {"wave": 11.0, "need": 11000.0, "cum": 66000.0, "drain": 18.5, "speed": 1.56, "breakeven": 1.23, "tMed": 13.4, "reached": 199.0, "death": 9.0}, {"wave": 12.0, "need": 12000.0, "cum": 78000.0, "drain": 19.65, "speed": 1.56, "breakeven": 1.3, "tMed": 14.2, "reached": 182.0, "death": 29.0}, {"wave": 13.0, "need": 13000.0, "cum": 91000.0, "drain": 20.0, "speed": 1.56, "breakeven": 1.33, "tMed": 13.9, "reached": 129.0, "death": 38.0}, {"wave": 14.0, "need": 14000.0, "cum": 105000.0, "drain": 20.0, "speed": 1.56, "breakeven": 1.33, "tMed": 15.4, "reached": 80.0, "death": 36.0}, {"wave": 15.0, "need": 15000.0, "cum": 120000.0, "drain": 20.0, "speed": 1.56, "breakeven": 1.33, "tMed": 15.9, "reached": 51.0, "death": 47.0}, {"wave": 16.0, "need": 16000.0, "cum": 136000.0, "drain": 20.0, "speed": 1.56, "breakeven": 1.33, "tMed": 16.8, "reached": 27.0, "death": 41.0}, {"wave": 17.0, "need": 17000.0, "cum": 153000.0, "drain": 20.0, "speed": 1.56, "breakeven": 1.33, "tMed": 18.2, "reached": 16.0, "death": 50.0}, {"wave": 18.0, "need": 18000.0, "cum": 171000.0, "drain": 20.0, "speed": 1.56, "breakeven": 1.33, "tMed": 17.8, "reached": 8.0, "death": 38.0}, {"wave": 19.0, "need": 19000.0, "cum": 190000.0, "drain": 20.0, "speed": 1.56, "breakeven": 1.33, "tMed": null, "reached": 5.0, "death": 40.0}, {"wave": 20.0, "need": 20000.0, "cum": 210000.0, "drain": 20.0, "speed": 1.56, "breakeven": 1.33, "tMed": null, "reached": 3.0, "death": 0.0}], "progression": [{"bot": "novice", "runs": 31.5, "firstBuy": 1.0, "bomb": 9.0, "magnet": 10.0, "mult": 31.5, "minutes": 27.0}, {"bot": "casual", "runs": 4.0, "firstBuy": 1.0, "bomb": 3.0, "magnet": 3.0, "mult": 4.0, "minutes": 25.0}], "tuning": [{"t": "AS-BUILT", "cfg": "none", "bot": "novice", "dur": 84.0, "p10": 68.0, "p90": 105.0, "capped": 0.0, "wave": 7.0, "gems": 133.3, "combo": 26.0}, {"t": "AS-BUILT", "cfg": "none", "bot": "casual", "dur": 122.0, "p10": 97.0, "p90": 163.0, "capped": 0.0, "wave": 13.0, "gems": 347.3, "combo": 124.0}, {"t": "AS-BUILT", "cfg": "none", "bot": "skilled", "dur": 900.0, "p10": 900.0, "p90": 900.0, "capped": 100.0, "wave": 53.0, "gems": 4665.4, "combo": 1460.0}, {"t": "AS-BUILT", "cfg": "max", "bot": "novice", "dur": 43.0, "p10": 34.0, "p90": 56.0, "capped": 0.0, "wave": 13.0, "gems": 349.5, "combo": 19.0}, {"t": "AS-BUILT", "cfg": "max", "bot": "casual", "dur": 770.0, "p10": 324.0, "p90": 900.0, "capped": 35.0, "wave": 80.5, "gems": 9006.9, "combo": 796.5}, {"t": "AS-BUILT", "cfg": "max", "bot": "skilled", "dur": 900.0, "p10": 900.0, "p90": 900.0, "capped": 100.0, "wave": 121.5, "gems": 22930.3, "combo": 1460.0}, {"t": "ÖNERİ", "cfg": "none", "bot": "novice", "dur": 94.0, "p10": 78.0, "p90": 116.0, "capped": 0.0, "wave": 6.0, "gems": 20.9, "combo": 4.0}, {"t": "ÖNERİ", "cfg": "none", "bot": "casual", "dur": 117.0, "p10": 96.0, "p90": 141.0, "capped": 0.0, "wave": 13.0, "gems": 47.9, "combo": 120.0}, {"t": "ÖNERİ", "cfg": "none", "bot": "skilled", "dur": 228.0, "p10": 175.0, "p90": 300.0, "capped": 0.0, "wave": 26.5, "gems": 186.2, "combo": 372.0}, {"t": "ÖNERİ", "cfg": "max", "bot": "novice", "dur": 101.0, "p10": 83.0, "p90": 114.0, "capped": 0.0, "wave": 8.0, "gems": 102.5, "combo": 4.0}, {"t": "ÖNERİ", "cfg": "max", "bot": "casual", "dur": 111.0, "p10": 96.0, "p90": 125.0, "capped": 0.0, "wave": 16.0, "gems": 197.6, "combo": 113.0}, {"t": "ÖNERİ", "cfg": "max", "bot": "skilled", "dur": 317.0, "p10": 281.0, "p90": 340.0, "capped": 0.0, "wave": 39.0, "gems": 1067.8, "combo": 512.0}], "progCompare": [{"t": "AS-BUILT", "bot": "novice", "runs": 32.0, "minutes": 27.0}, {"t": "AS-BUILT", "bot": "casual", "runs": 4.0, "minutes": 26.0}, {"t": "ÖNERİ", "bot": "novice", "runs": 121.5, "minutes": 200.0}, {"t": "ÖNERİ", "bot": "casual", "runs": 61.5, "minutes": 114.0}], "backlog": [{"id": "F-001", "name": "Analytics event katmanı", "cat": "Analytics & deney", "problem": "[AS-BUILT] Telemetri yok; tek dış çağrı Google Fonts. Hiçbir tuning kararı veriyle doğrulanamıyor.", "solution": "Track(name, params) kuyruğu; localStorage tamponu; sendBeacon ile toplu gönderim; endpoint remote config ile; consent yoksa yalnızca anonim sayaç.", "kpi": "Tüm KPI ölçümü", "R": 10.0, "I": 2.0, "C": 80.0, "E": 3.0, "rice": 5.33, "deps": "", "risk": "Endpoint/gizlilik maliyeti", "accept": "GDD §10 şemasındaki 14 event üretimde tetikleniyor; çevrimdışı 200 event tamponlanıp sonra gönderiliyor; frame süresine etkisi <0,2 ms", "touch": "startGame, doBlast, doBomb, waveUp, gameOver, buy, handleTap, visibilitychange", "phase": "P0"}, {"id": "F-002", "name": "Save şeması v2 + migration", "cat": "Teknik/Platform", "problem": "[AS-BUILT] SAVE_KEY = vortexBlast.save.v1, sürüm alanı ve migration yok; yeni sistemler (görev, envanter) eklenince v1 kırılır.", "solution": "save.v alanı; migrate(v1→v2) zinciri; yeni alanlar: stats, daily, inventory, settings; bozuk kayıt yedeği.", "kpi": "D1/D7 (veri kaybı churn)", "R": 10.0, "I": 1.0, "C": 100.0, "E": 1.5, "rice": 6.67, "deps": "", "risk": "Migration hatası = ilerleme kaybı", "accept": "v1 kaydı v2ye kayıpsız taşınıyor (gems/best/upg/muted); bozuk JSON yedeğe alınıp varsayılanla açılıyor; birim test 6 senaryo geçiyor", "touch": "load(), persist(), save, SAVE_KEY", "phase": "P0"}, {"id": "F-003", "name": "Test kancasını üretimde kapat", "cat": "Teknik/Platform", "problem": "[AS-BUILT] window.__vortex.setStability üretimde açık; konsoldan sonsuz run/skor hilesi.", "solution": "__vortex yalnızca ?debug=1 veya localhost iken tanımlanır; setStability kaldırılır, salt-okunur kalır.", "kpi": "Skor/leaderboard güvenilirliği", "R": 10.0, "I": 0.5, "C": 100.0, "E": 0.25, "rice": 20.0, "deps": "", "risk": "Otomatik testler kancaya bağımlı", "accept": "Üretim URLsinde window.__vortex undefined; ?debug=1 ile headless test geçiyor", "touch": "window.__vortex bloğu", "phase": "P0"}, {"id": "F-004", "name": "Pause butonu", "cat": "FTUE & UX", "problem": "[AS-BUILT] Yalnızca visibilitychange auto-pause ve drawer; oyun içinde bilinçli duraklatma yok.", "solution": "HUD sol üstte (mute yanında) pause; duraklatma paneli: devam / ayarlar / ana menü.", "kpi": "Oturum süresi, rage-quit", "R": 9.0, "I": 1.0, "C": 100.0, "E": 0.75, "rice": 12.0, "deps": "", "risk": "Pause-scumming (dönüşü durdurup plan yapma)", "accept": "Pause sırasında simulate çalışmıyor; panelde 3 eylem; resume sonrası 0,5 sn geri sayım", "touch": "drawHUD, handleTap, update, autoPaused", "phase": "P1"}, {"id": "F-005", "name": "Ayarlar ekranı", "cat": "FTUE & UX", "problem": "[AS-BUILT] Yalnızca mute (MUTE_BTN, M kısayolu). Müzik/haptik/hareket/dil/gizlilik ayarı yok.", "solution": "Ayarlar paneli: SFX, müzik, haptik, reduced motion, dil, gizlilik seçenekleri, save sıfırla (onaylı).", "kpi": "Erişilebilirlik, consent zorunluluğu", "R": 8.0, "I": 1.0, "C": 80.0, "E": 2.5, "rice": 2.56, "deps": "F-002", "risk": "UI yoğunluğu 540x960de", "accept": "Tüm ayarlar save.settingsde kalıcı; panel 400 px genişlikte taşmıyor; reset iki adımlı onay", "touch": "drawMute, handleTap, Snd.setMuted, buzz, save", "phase": "P1"}, {"id": "F-006", "name": "Etkileşimli FTUE (ilk 120 sn)", "cat": "FTUE & UX", "problem": "[AS-BUILT] FTUE yalnızca yanıp sönen ipucu metni (drawHUD tip); halkalar arası eşleşme ve zamanlama hiç öğretilmiyor.", "solution": "İlk run: drain %0 → kademeli; el işaretiyle 1) halka içi küme 2) halka-arası hizalama bekle 3) 6+ ile bomba 4) bomba kullan. Adım geçince drain normale döner.", "kpi": "D1, FTUE tamamlama", "R": 10.0, "I": 3.0, "C": 80.0, "E": 4.0, "rice": 6.0, "deps": "F-001, F-018", "risk": "Fazla el tutma sıkar", "accept": "FTUE adım-tamamlama hunisi ölçülüyor; ilk runda ölüm oranı ilk 60 sn içinde <%5; FTUE atlanabilir", "touch": "drainRate, tapBoard, drawHUD, fillBoardFresh, spawnColor", "phase": "P1"}, {"id": "F-007", "name": "Reduced motion + sarsıntı/flash/haptik kapatma", "cat": "Erişilebilirlik", "problem": "[AS-BUILT] shake, flashA, boardPunch, buzz her zaman açık; prefers-reduced-motion okunmuyor.", "solution": "settings.motion: tam/azaltılmış; prefers-reduced-motion varsayılanı; shake×0,2, flash kapalı, jel salınımı azaltılmış.", "kpi": "Erişilebilirlik, store değerlendirmesi", "R": 4.0, "I": 1.0, "C": 100.0, "E": 1.0, "rice": 4.0, "deps": "F-005", "risk": "Juice kaybı", "accept": "Reduced modda flash alfa 0, shake ≤3 px; ayar kapatılınca tam juice geri geliyor", "touch": "drawBoard (shake), render (flashA), buzz, geom (jel)", "phase": "P1"}, {"id": "F-008", "name": "Dinamik müzik (Web Audio, stability-reaktif)", "cat": "Juice/Audio/Müzik", "problem": "[AS-BUILT] Müzik yok; yalnızca sentezlenmiş SFX (Snd).", "solution": "Sentezlenmiş 4 katmanlı döngü (bas, pad, arp, perküsyon); stability <%25te tempo/filtre değişimi; combo ile arp yoğunluğu.", "kpi": "Oturum süresi", "R": 8.0, "I": 1.0, "C": 50.0, "E": 4.0, "rice": 1.0, "deps": "F-005", "risk": "Mobil CPU/pil; mevcut SFX ile çakışma", "accept": "Müzik açıkken ortalama frame süresi artışı <0,5 ms; ayrı ses düzeyi; SFX ducking", "touch": "Snd (yeni music modülü), update", "phase": "Later"}, {"id": "F-009", "name": "PWA: manifest + service worker + font self-host", "cat": "Teknik/Platform", "problem": "[AS-BUILT] Manifest/SW/ikon yok; Google Fonts harici → çevrimdışında Lilita/Fredoka düşer.", "solution": "manifest.webmanifest, sw.js (cache-first), 192/512 ikon, fontlar base64 veya yerel woff2.", "kpi": "Tekrar ziyaret (D7), çevrimdışı oynanış", "R": 6.0, "I": 1.0, "C": 80.0, "E": 2.0, "rice": 2.4, "deps": "", "risk": "Tek dosya ilkesi (SW ayrı dosya)", "accept": "Lighthouse PWA installable; uçak modunda tam açılış, doğru fontlar", "touch": "<head>, FD/FB font yığınları", "phase": "P1"}, {"id": "F-010", "name": "Rewarded revive (run başına 1)", "cat": "Monetizasyon", "problem": "[AS-BUILT] gameOver() doğrudan dying durumuna geçiyor; devam etme yok.", "solution": "dying başında 3 sn kart: \"Reklam izle → %50 stability ile devam\"; run başına 1 kez; reklam yoksa gizli.", "kpi": "Rewarded opt-in, ARPDAU, run süresi", "R": 7.0, "I": 2.0, "C": 80.0, "E": 3.0, "rice": 3.73, "deps": "F-013, F-001", "risk": "Bomba/drain dengesi bozulur", "accept": "Opt-in oranı ölçülüyor; revive sonrası 1,5 sn drain koruması; run başına en fazla 1", "touch": "gameOver, update (dying), drawOver", "phase": "P4"}, {"id": "F-011", "name": "Run sonu 2× gem (rewarded)", "cat": "Monetizasyon", "problem": "[AS-BUILT] drawOver runGemsi gösteriyor ama katlama yok.", "solution": "Run sonu kartında \"2× gem\" rewarded butonu.", "kpi": "ARPDAU, upgrade hızı", "R": 7.0, "I": 1.0, "C": 80.0, "E": 1.0, "rice": 5.6, "deps": "F-013", "risk": "Ekonomi enflasyonu", "accept": "Butona tek dokunuş; reklam tamamlanınca runGems kadar ek gem; günde ≤5", "touch": "drawOver, handleTap, addGems", "phase": "P4"}, {"id": "F-012", "name": "No-ads IAP", "cat": "Monetizasyon", "problem": "Interstitial eklenirse rahatsız oyuncu için çıkış yolu yok [ARAŞTIRMA S13,S14].", "solution": "Tek seferlik IAP: interstitial kapalı + günlük 1 bonus.", "kpi": "IAP dönüşüm", "R": 3.0, "I": 1.0, "C": 50.0, "E": 3.0, "rice": 0.5, "deps": "F-013, F-031", "risk": "Web'de ödeme altyapısı yok", "accept": "Satın alma sonrası interstitial çağrısı 0; restore purchases çalışıyor", "touch": "Ads adapter, save.entitlements", "phase": "P4"}, {"id": "F-013", "name": "Reklam soyutlama katmanı (adapter)", "cat": "Monetizasyon", "problem": "Platform bağımsız reklam çağrısı yok; web/TWA/Capacitor farklı SDK ister.", "solution": "Ads.showRewarded(placement) → Promise<bool>; uygulamalar: mock, web (AdSense H5 [VARSAYIM]), AdMob (Capacitor).", "kpi": "Monetizasyon önkoşulu", "R": 7.0, "I": 1.0, "C": 80.0, "E": 3.0, "rice": 1.87, "deps": "F-001", "risk": "SDK onay süreçleri", "accept": "Mock ile tüm yerleşimler uçtan uca test ediliyor; reklam yüklenemezse buton gizleniyor", "touch": "yeni Ads modülü, drawOver", "phase": "P3"}, {"id": "F-014", "name": "Günlük ödül takvimi (7 gün)", "cat": "Retention/LiveOps", "problem": "[AS-BUILT] Günlük ödül/streak yok.", "solution": "7 günlük takvim: gem + booster karışık (çeşitlilik [ARAŞTIRMA S18]); kaçırılınca 1. güne dönmez, bekler.", "kpi": "D1→D7", "R": 8.0, "I": 1.0, "C": 80.0, "E": 2.0, "rice": 3.2, "deps": "F-002", "risk": "Saat hilesi", "accept": "Yerel tarih değişiminde 1 kez claim; 7 gün sonra döngü; saat geri alma claim üretmiyor", "touch": "save.daily, title ekranı", "phase": "P1"}, {"id": "F-015", "name": "Günlük görevler (3/gün)", "cat": "Retention/LiveOps", "problem": "[AS-BUILT] blasts, maxCombo, bombsMade, wave sayılıyor ama hedefe bağlanmıyor.", "solution": "Günde 3 görev (ör. \"x6 combo yap\", \"3 bomba üret\", \"Dalga 8e ulaş\"); tamamlama gem + booster.", "kpi": "D7, oturum/gün", "R": 8.0, "I": 2.0, "C": 80.0, "E": 3.0, "rice": 4.27, "deps": "F-002, F-001", "risk": "Görev sıkıcılığı", "accept": "Görev ilerlemesi run içinde canlı; 15 görev şablonu; günlük yenileme yerel gece yarısı", "touch": "doBlast, doBomb, waveUp, gameOver, drawOver", "phase": "P1"}, {"id": "F-016", "name": "Başarımlar (20)", "cat": "Retention/LiveOps", "problem": "Uzun vadeli hedef yok.", "solution": "20 başarım (kademeli); gem ödülü; profil ekranı.", "kpi": "D30", "R": 6.0, "I": 0.5, "C": 80.0, "E": 2.0, "rice": 1.2, "deps": "F-002", "risk": "Düşük etki", "accept": "20 başarım tanımlı ve save'de; geriye dönük v1 bestten açılanlar veriliyor", "touch": "save.stats, drawOver", "phase": "Later"}, {"id": "F-017", "name": "Daily Challenge (seed'li run)", "cat": "Modlar", "problem": "Tek mod endless; tekrar sebebi sadece best.", "solution": "Günün seedi (tarih hash); herkes aynı tahta/spawn; günde 1 skor kaydı; ödül.", "kpi": "D7, oturum/gün", "R": 6.0, "I": 2.0, "C": 50.0, "E": 4.0, "rice": 1.5, "deps": "F-018", "risk": "Halka hızı simTye bağlı → aynı seed aynı run değil", "accept": "Aynı seed iki cihazda aynı ilk 30 spawnı üretiyor; günde 1 resmi deneme", "touch": "fillBoardFresh, spawnColor, simT başlangıcı", "phase": "Later"}, {"id": "F-018", "name": "Seed'lenebilir oyun RNG", "cat": "Teknik/Platform", "problem": "[AS-BUILT] Oynanış Math.random kullanıyor (newBlock rengi, spawnColor, fillBoardFresh).", "solution": "Oyun RNG'si (mulberry32) ve kozmetik RNG ayrımı; seed run başında atanır.", "kpi": "Test edilebilirlik, Daily Challenge", "R": 10.0, "I": 0.5, "C": 100.0, "E": 0.75, "rice": 6.67, "deps": "", "risk": "Yok denecek kadar az", "accept": "Aynı seed + aynı tap dizisi → aynı skor (headless test)", "touch": "fillBoardFresh, spawnColor, startGame", "phase": "P0"}, {"id": "F-019", "name": "Zorluk yeniden dengesi (bomba döngüsü + drain tavanı)", "cat": "Core loop & zorluk", "problem": "[AS-BUILT] Model (GDD §5): skilled bot %100 oranda 900 sn tavanına ulaşıyor (doBomb +20 stability; drainRate dalga 13te 20%/snde sabit). Gem&Score Boost skoru çarptığı için dalgaları hızlandırıyor: novice medyan run 84 sn (upgrade yok) → 43 sn (maks.). Maks. upgrade'li casual oyuncunun %29'u 900 sn tavanına ulaşıyor.", "solution": "PROPOSED seti (vb_model.PROPOSED): dalga eşiği çarpansız skorla (base score); bomba dolumu 20 kalır (12 denendi, Bomb Threshold upgrade'ini zararlı yaptı); drain tavanı 24, tavan sonrası +0,6/dalga; combo penceresi 1,8→1,3 sn. Remote config ile A/B.", "kpi": "Run süresi dağılımı, D1", "R": 10.0, "I": 2.0, "C": 80.0, "E": 2.0, "rice": 8.0, "deps": "F-001, F-036", "risk": "Mevcut oyuncu algısı", "accept": "Model (out/tuning_compare.md): skilled tavana ulaşma oranı %0; maks. upgrade ile novice medyan run, upgrade'siz değerden kısa değil; casual medyan 90–180 sn", "touch": "drainRate, doBomb, doBlast (skor), waveScore kontrolü (simulate), COMBO_WINDOW, docs/tools/vb_model.py", "phase": "P0"}, {"id": "F-020", "name": "Yeni blok: Kilitli blok", "cat": "Yeni blok/engel türleri", "problem": "[AS-BUILT] Blok türleri yalnızca 4 renk + bomba; dalga ilerleyince yeni karar yok.", "solution": "Dalga 4+ spawnlarında %6 kilitli; komşusu patlayınca kilit açılır; o zamana dek kümeye katılmaz.", "kpi": "Run derinliği, D7", "R": 8.0, "I": 1.0, "C": 50.0, "E": 3.0, "rice": 1.33, "deps": "F-018", "risk": "Okunabilirlik", "accept": "Kilit görseli 400 px ekranda seçilebilir; spawn oranı remote config; model ile run süresi etkisi ölçülmüş", "touch": "newBlock, spawnColor, computeClusters, drawBlock, buildBlockSprites", "phase": "Later"}, {"id": "F-021", "name": "Yeni blok: Joker (prizma)", "cat": "Yeni blok/engel türleri", "problem": "Büyük küme yaratma aracı yalnızca şans + magnet.", "solution": "Her renkle eşleşir; 7+ blast ödülü veya booster; küme rengini komşular belirler.", "kpi": "Ortalama küme boyu, keyif", "R": 7.0, "I": 1.0, "C": 80.0, "E": 2.0, "rice": 2.8, "deps": "", "risk": "Küme algoritması belirsizliği (iki renk köprüsü)", "accept": "Joker en fazla tek kümeye ait; birim testte 5 köprü senaryosu", "touch": "computeClusters, newBlock, drawBlock", "phase": "P2"}, {"id": "F-022", "name": "Renk bombası", "cat": "Booster/power-up", "problem": "Tek güç bloğu (Vortex Bomb) var.", "solution": "9+ blast ile üretilir; dokununca o renkteki tüm blokları patlatır.", "kpi": "Combo/juice, run derinliği", "R": 7.0, "I": 1.0, "C": 80.0, "E": 2.0, "rice": 2.8, "deps": "", "risk": "Stability dengesine etkisi", "accept": "Model ile ortalama run süresi değişimi raporlanmış; görsel ayırt edilebilir", "touch": "doBlast, newBlock, tapBoard, drawBlock", "phase": "P2"}, {"id": "F-023", "name": "Run öncesi booster'lar", "cat": "Booster/power-up", "problem": "Gem için upgrade dışında sink yok.", "solution": "3 booster: Başlangıç bombası, %20 kalkan (ilk ölümde %30 ile devam), 30 sn magnet+2; gem ile veya ödül olarak.", "kpi": "Gem sink, oturum başına run", "R": 7.0, "I": 2.0, "C": 50.0, "E": 4.0, "rice": 1.75, "deps": "F-024", "risk": "Pay-to-win algısı", "accept": "Seçim ekranı 1 dokunuşta; booster etkisi run sonu özetinde görünüyor", "touch": "startGame, drawTitle, drawOver", "phase": "Later"}, {"id": "F-024", "name": "Booster envanteri", "cat": "Meta & ekonomi", "problem": "Ödül çeşitliliği için tek kaynak (gem) yetersiz [ARAŞTIRMA S18].", "solution": "save.inventory {bomb, shield, magnet}; ödül kaynakları: günlük, görev, başarım.", "kpi": "Retention ödül çeşitliliği", "R": 7.0, "I": 1.0, "C": 80.0, "E": 1.5, "rice": 3.73, "deps": "F-002", "risk": "Envanter şişmesi", "accept": "Envanter save v2de; maksimum 99/tür; UIda sayaç", "touch": "save, drawDrawer", "phase": "P2"}, {"id": "F-025", "name": "Upgrade ağacını genişlet (yeni sink)", "cat": "Meta & ekonomi", "problem": "[AS-BUILT] 3 upgrade, toplam maliyet hesaplandı (GDD §6); bitince gemin kullanım yeri kalmıyor.", "solution": "+3 upgrade: Combo Window (+0,2 sn/sv), Core Shield (başlangıç stability +5/sv), Spawn Harmony (spawnColor eşleşme %22→%34); drawer kaydırma.", "kpi": "D30, gem sink", "R": 8.0, "I": 2.0, "C": 80.0, "E": 3.0, "rice": 4.27, "deps": "F-002", "risk": "Güç enflasyonu (F-019 ile çatışır)", "accept": "Model: tüm upgrade'leri maksimuma çıkarma süresi 20–30 saat bandında; drawer 6 kartı kaydırarak gösteriyor", "touch": "UPGRADES, drawDrawer, buyRect, COMBO_WINDOW, spawnColor", "phase": "P2"}, {"id": "F-026", "name": "Kozmetik temalar (Core + blok)", "cat": "Meta & ekonomi", "problem": "Kozmetik yok; ikonlar/renkler sabit (COLORS, ICONS).", "solution": "4 tema (Neon, Okyanus, Şeker, Galaksi); gem veya IAP; sprite cache temaya göre yeniden kurulur.", "kpi": "Gem sink, IAP", "R": 6.0, "I": 1.0, "C": 50.0, "E": 5.0, "rice": 0.6, "deps": "F-024", "risk": "Renk körlüğü okunabilirliği temada bozulabilir", "accept": "Tema değişimi <100 ms (buildBlockSprites); her temada ikon şekilleri korunuyor", "touch": "COLORS, makeIcon, buildBlockSprites, buildBg", "phase": "Later"}, {"id": "F-027", "name": "Win-streak bonusu", "cat": "Retention/LiveOps", "problem": "Art arda iyi oynamanın ödülü yok; türde etkili [ARAŞTIRMA S16,S17].", "solution": "Dalga 5+ biten her run streak+1; streak 1/2/3+: başlangıç stability +5/+10/+15; ölüm <dalga 5 sıfırlar.", "kpi": "Oturum başına run", "R": 6.0, "I": 1.0, "C": 50.0, "E": 1.5, "rice": 2.0, "deps": "F-002", "risk": "Kayıp hissi (frustration)", "accept": "Streak HUDda; sıfırlanma ekranında kayıp net gösteriliyor", "touch": "startGame, gameOver, drawTitle", "phase": "P2"}, {"id": "F-028", "name": "Boss dalga (her 5 dalgada)", "cat": "Modlar", "problem": "Zorluk eğrisi yalnızca drain + halka hızı (ringSpeed wf).", "solution": "Dalga 5/10/15...: 20 sn boyunca bir halka ters ve 1,6x hızlı + kilitli blok yağmuru; temizlenince gem.", "kpi": "Run zirveleri, paylaşım", "R": 7.0, "I": 2.0, "C": 50.0, "E": 5.0, "rice": 1.4, "deps": "F-020", "risk": "Kaos/okunabilirlik", "accept": "Boss başlangıç ve bitişi banner+ses ile; model ile ölüm oranı artışı ≤ +%15", "touch": "ringSpeed, waveUp, banner, spawnColor", "phase": "Later"}, {"id": "F-029", "name": "Zen modu", "cat": "Modlar", "problem": "Rahat oynamak isteyen için mod yok.", "solution": "Drain yok, dalga yok, gem kazancı ×0,25.", "kpi": "Oturum süresi (alt segment)", "R": 4.0, "I": 0.5, "C": 80.0, "E": 1.0, "rice": 1.6, "deps": "", "risk": "Ana modu yamyamlar", "accept": "Zen modunda gem/dk ≤ ana modun %25i", "touch": "update, drainRate, drawTitle", "phase": "Later"}, {"id": "F-030", "name": "Paylaşılabilir skor kartı", "cat": "Sosyal", "problem": "[AS-BUILT] Skor yalnızca yerel best; paylaşım yok.", "solution": "Run sonu: canvas'tan 1080x1920 kart; Web Share API (dosya), desteklenmiyorsa indirme.", "kpi": "Organik K-faktör", "R": 5.0, "I": 0.5, "C": 80.0, "E": 1.5, "rice": 1.33, "deps": "", "risk": "Platform desteği değişken", "accept": "Android Chromeda paylaşım sayfası açılıyor; kart 300 ms altında üretiliyor", "touch": "drawOver, handleTap", "phase": "P2"}, {"id": "F-031", "name": "Store paketleme (Capacitor)", "cat": "Teknik/Platform", "problem": "Store yok; native reklam/IAP için gerekli [ARAŞTIRMA S22].", "solution": "Capacitor projesi; www/ = index.html; AdMob + IAP eklentileri; haptik native.", "kpi": "Erişim, monetizasyon", "R": 6.0, "I": 2.0, "C": 50.0, "E": 8.0, "rice": 0.75, "deps": "F-009, F-034, F-033", "risk": "Build adımı, inceleme reddi (4.2)", "accept": "Android iç test kanalında yayında; iOS TestFlight; 60 fps orta segment cihazda", "touch": "Proje kökü (yeni), Ads adapter", "phase": "P3"}, {"id": "F-032", "name": "Lokalizasyon altyapısı (TR/EN)", "cat": "Lokalizasyon", "problem": "[AS-BUILT] Tüm metinler hard-coded İngilizce (banner, txt çağrıları).", "solution": "STR tablosu + t(key); navigator.language; TR ve EN; uzun metin için otomatik font küçültme.", "kpi": "Erişim (TR pazarı), store dönüşümü", "R": 7.0, "I": 1.0, "C": 80.0, "E": 2.5, "rice": 2.24, "deps": "", "risk": "Metin taşması", "accept": "Tüm kullanıcı metinleri t() üzerinden; TR'de taşma yok (otomatik test 400 px)", "touch": "txt, banner, drawHUD, drawOver, drawDrawer, UPGRADES", "phase": "P1"}, {"id": "F-033", "name": "Consent (CMP) + gizlilik politikası + yaş kapısı", "cat": "Uyumluluk", "problem": "Reklam/analitik eklendiğinde zorunlu [ARAŞTIRMA S23–S26].", "solution": "İlk açılışta yaş kapısı; EEA/UK için sertifikalı CMP; TR için KVKK aydınlatma metni; ayarlarda privacy options.", "kpi": "Yasal uyum, Limited Ads riskini önleme", "R": 7.0, "I": 1.0, "C": 80.0, "E": 3.0, "rice": 1.87, "deps": "F-013", "risk": "Hukuki yorum hatası", "accept": "Consent yokken kişiselleştirilmiş reklam ve analitik ID gönderilmiyor; ayarlardan rıza geri alınabiliyor", "touch": "Ads adapter, Track, ayarlar", "phase": "P3"}, {"id": "F-034", "name": "Modülerleşme: native ES modules (build yok)", "cat": "Teknik/Platform", "problem": "[AS-BUILT] Tek dosya ~1400 satır; her özellik eklemesi bakım maliyetini artırıyor.", "solution": "src/*.js ES modülleri (config, audio, render, sim, ui, meta); index.html <script type=module>; dağıtım için isteğe bağlı tek dosya inline scripti (python).", "kpi": "Geliştirme hızı", "R": 10.0, "I": 0.5, "C": 80.0, "E": 3.0, "rice": 1.33, "deps": "F-035", "risk": "file:// altında ES module CORS → yerel sunucu gerekir", "accept": "Davranış birebir aynı (headless parity testi); hiçbir modül 400 satırı aşmıyor", "touch": "Tüm dosya", "phase": "P2"}, {"id": "F-035", "name": "Otomatik test: headless smoke + model parity", "cat": "Teknik/Platform", "problem": "Test yok; dengeleme modeli (vb_model.py) ile JS arasında sapma riski.", "solution": "Headless Chrome: açılış, hata yok, 1 blast, skor artışı; parity: aynı seed ile JS ve Python modelinin ilk 50 settle sonucu eşit.", "kpi": "Kalite", "R": 10.0, "I": 0.5, "C": 80.0, "E": 2.0, "rice": 2.0, "deps": "F-018, F-003", "risk": "Headless rAF zamanlaması", "accept": "Tek komutla çalışıyor; CI'sız yerelde <60 sn", "touch": "docs/tools (yeni test), window.__vortex (debug)", "phase": "P0"}, {"id": "F-036", "name": "Remote config + A/B atama", "cat": "Analytics & deney", "problem": "Tuning sabitleri koda gömülü (drainRate, UPGRADES).", "solution": "config.json fetch (timeout 1,5 sn, yerel varsayılan); kullanıcı ID hash ile kova; event'lere variant parametresi.", "kpi": "Deney hızı", "R": 10.0, "I": 1.0, "C": 80.0, "E": 2.0, "rice": 4.0, "deps": "F-001", "risk": "Yanlış config ile oyun kırılması", "accept": "Geçersiz config yerel varsayılana düşüyor; 2 varyantlı deney uçtan uca raporlanıyor", "touch": "drainRate, UPGRADES, doBomb sabitleri", "phase": "P0"}, {"id": "F-037", "name": "Hafif anti-cheat (save checksum + sınır)", "cat": "Teknik/Platform", "problem": "[AS-BUILT] localStorage düz JSON; gem düzenlemesi kolay.", "solution": "Save HMAC benzeri checksum (gizli değil, caydırıcı); gems/best makul sınır; şüpheli kayıtlar leaderboard dışı.", "kpi": "Leaderboard güveni", "R": 3.0, "I": 0.25, "C": 80.0, "E": 1.0, "rice": 0.6, "deps": "F-002", "risk": "Gerçek güvenlik değil", "accept": "Elle düzenlenen save tespit edilip işaretleniyor; meşru oyuncu etkilenmiyor", "touch": "load, persist", "phase": "P3"}, {"id": "F-038", "name": "Son şans anı (low-stability slow-mo)", "cat": "Juice/Audio/Müzik", "problem": "[AS-BUILT] Stability <%25te yalnızca tick sesi + vinyet; ölüm ani.", "solution": "Run başına 1 kez stability %8in altına inince 0,8 sn zaman ×0,5 + kalp atışı; oyuncuya kurtarma şansı.", "kpi": "Run süresi, near-miss hissi", "R": 8.0, "I": 0.5, "C": 50.0, "E": 1.0, "rice": 2.0, "deps": "", "risk": "Zorluğu düşürür", "accept": "Run başına en fazla 1; model ile run süresi etkisi ≤ +%5", "touch": "update, Snd.tick, render", "phase": "P2"}, {"id": "F-039", "name": "Renk körü modu (desen katmanı)", "cat": "Erişilebilirlik", "problem": "[AS-BUILT] İkonlar (flame/drop/star/leaf) zaten şekille ayırıyor; gradyanlar benzer tonda.", "solution": "Ayarda yüksek kontrast: blok kenarına desen (çizgili/noktalı) + daha koyu kontur.", "kpi": "Erişilebilirlik", "R": 3.0, "I": 0.5, "C": 80.0, "E": 1.5, "rice": 0.8, "deps": "F-005", "risk": "Görsel gürültü", "accept": "Deuteranopi simülasyonunda 4 renk ayırt edilebilir", "touch": "paintBody, buildBlockSprites", "phase": "Later"}, {"id": "F-040", "name": "Sezon pass-lite (30 gün)", "cat": "Retention/LiveOps", "problem": "Uzun vadeli hedef/LiveOps yok; türde yaygınlaşıyor [ARAŞTIRMA S31].", "solution": "Görev puanı ile 30 kademe; ücretsiz + premium şerit (kozmetik/booster).", "kpi": "D30, IAP", "R": 5.0, "I": 1.0, "C": 50.0, "E": 6.0, "rice": 0.42, "deps": "F-015, F-031, F-026", "risk": "İçerik üretim yükü", "accept": "30 kademe içerik tanımlı; ücretsiz şerit tek başına tamamlanabilir", "touch": "yeni sezon modülü", "phase": "Later"}, {"id": "F-041", "name": "Event şablonu (hafta sonu 2× gem vb.)", "cat": "Retention/LiveOps", "problem": "LiveOps aracı yok.", "solution": "Remote config'te tarih aralıklı çarpanlar (gem, görev ödülü, booster).", "kpi": "DAU zirveleri", "R": 6.0, "I": 0.5, "C": 80.0, "E": 1.0, "rice": 2.4, "deps": "F-036", "risk": "Yanlış tarih/saat dilimi", "accept": "Event başlangıç/bitişi UTC ile doğru; HUD rozetinde gösteriliyor", "touch": "addGems, drawTitle", "phase": "P4"}, {"id": "F-042", "name": "Yerel skor geçmişi (top 10)", "cat": "Sosyal", "problem": "[AS-BUILT] Yalnızca save.best.", "solution": "Son 10 run + en iyi 10; trend grafiği yok, liste.", "kpi": "Hedef koyma", "R": 6.0, "I": 0.5, "C": 80.0, "E": 1.0, "rice": 2.4, "deps": "F-002", "risk": "Düşük", "accept": "Run sonrası liste güncel; save boyutu <4 KB", "touch": "gameOver, drawOver", "phase": "P2"}, {"id": "F-043", "name": "Run sonu \"sonraki hedef\" kartı", "cat": "FTUE & UX", "problem": "[AS-BUILT] drawOver yalnızca drawerı işaret ediyor; oyuncuya net hedef verilmiyor.", "solution": "En yakın upgrade için kalan gem, en yakın görev, best'e kalan skor.", "kpi": "Oturum başına run, D1", "R": 9.0, "I": 1.0, "C": 80.0, "E": 1.0, "rice": 7.2, "deps": "", "risk": "Ekran kalabalığı", "accept": "Kartta en fazla 2 hedef; PLAY AGAIN butonunun konumu değişmiyor", "touch": "drawOver, anyAffordable", "phase": "P1"}, {"id": "F-044", "name": "Gem ekonomisi yeniden ölçekleme", "cat": "Meta & ekonomi", "problem": "[AS-BUILT] Upgrade'lerin tamamı 8.561 gem; model: casual oyuncu tümünü medyan 4 runda (≈25 dk), novice ≈31 runda (≈27 dk) bitiriyor → meta ilk oturumda tükeniyor.", "solution": "Tüm gem kaynaklarına GEM_RATE = 0,15 (kesirli birikim, runGemFrac); dalga ödülü dahil. F-025 yeni sinkleri ile birlikte.", "kpi": "D7/D30, gem sink süresi", "R": 10.0, "I": 2.0, "C": 80.0, "E": 1.0, "rice": 16.0, "deps": "F-002", "risk": "Mevcut oyuncuların kazanç algısı (eski save'lerde gem korunur)", "accept": "Model (out/progression_compare.md): casual için mevcut 3 upgrade'i bitirme ≥ 50 run (ölçülen: 61,5); ≥ 100 run hedefi F-025 yeni sinkleriyle birlikte; ilk upgrade ≤ 2. run; run sonu gem sayısı tam sayı gösteriliyor", "touch": "addGems, doBlast, doBomb, waveUp, drawOver", "phase": "P0"}], "phases": [{"p": "P0", "name": "Hardening & Instrumentation", "effort": 12.5, "weeks": 6.0, "measure": 0.0, "start": "2026-11-02", "end": "2026-12-13"}, {"p": "P1", "name": "Retention çekirdeği", "effort": 18.75, "weeks": 9.0, "measure": 2.0, "start": "2026-12-14", "end": "2027-02-28"}, {"p": "P2", "name": "İçerik derinliği", "effort": 16.5, "weeks": 8.0, "measure": 0.0, "start": "2027-03-01", "end": "2027-04-25"}, {"p": "P3", "name": "Platform + monetizasyon altyapısı", "effort": 15.0, "weeks": 8.0, "measure": 0.0, "start": "2027-04-26", "end": "2027-06-20"}, {"p": "P4", "name": "Monetizasyon soft-launch", "effort": 8.0, "weeks": 4.0, "measure": 4.0, "start": "2027-06-21", "end": "2027-08-15"}], "laterEffort": 35.5, "risks": [{"id": "R1", "risk": "Bot modeli gerçek oyuncuyu temsil etmiyor, tuning yanlış", "p": 4.0, "i": 4.0, "score": 16.0, "mitigation": "F-001 ile tap aralığı ve küme boyu ölçülüp BOTS kalibre edilir. Remote config ile canlı düzeltme (F-036)"}, {"id": "R2", "risk": "Tuning ve revive birlikte dengeyi tekrar bozar", "p": 3.0, "i": 4.0, "score": 12.0, "mitigation": "Her denge değişikliği vb_proposed.py regresyonundan geçer. Revive run başına 1"}, {"id": "R3", "risk": "Organik web trafiği G1 için yetersiz", "p": 4.0, "i": 3.0, "score": 12.0, "mitigation": "Web oyun portalları ve topluluklar [VARSAYIM]. G1 eşiği 1.000 kurulumla sınırlı. Küçük reklam testi"}, {"id": "R4", "risk": "Store politikası (Families/çocuk algısı, 4.2) reddi", "p": 3.0, "i": 4.0, "score": 12.0, "mitigation": "Hedef kitle beyanı hukuki görüşle. Yaş kapısı, self-certified SDK [ARAŞTIRMA S24]. iOS'ta native özellikler (haptik, IAP)"}, {"id": "R5", "risk": "Yeni bloklar okunabilirliği bozar", "p": 3.0, "i": 3.0, "score": 9.0, "mitigation": "400 px ekranda test. Spawn oranları remote config'te"}, {"id": "R6", "risk": "Modülerleşme/Capacitor regresyonu", "p": 3.0, "i": 3.0, "score": 9.0, "mitigation": "Parity ve smoke testleri (F-035), ADR-2 eşiği"}, {"id": "R7", "risk": "Düşük eCPM (TR/gelişen GEO) gelir hedefini tutturmaz", "p": 4.0, "i": 3.0, "score": 12.0, "mitigation": "Soft-launch GEO karışımı. IAP (no-ads, starter). LTV/CPI ölçülmeden UA yapılmaz"}, {"id": "R8", "risk": "KVKK/GDPR uyumsuzluğu (yurt dışı aktarım)", "p": 2.0, "i": 5.0, "score": 10.0, "mitigation": "Analitik consent öncesi anonim. SCC'li sağlayıcı seçimi [ARAŞTIRMA S26]"}, {"id": "R9", "risk": "Kapasite (20 sa/hafta) kayması", "p": 3.0, "i": 3.0, "score": 9.0, "mitigation": "%20 tampon. Her faz sonunda Later'a itme kararı"}, {"id": "R10", "risk": "Combo penceresi kısalınca \"juice\" hissi azalır", "p": 2.0, "i": 3.0, "score": 6.0, "mitigation": "E2 deneyi (1,8 / 1,3 / 1,1 sn)"}], "gates": [{"gate": "G0", "when": "P0 sonu (2026-12-13)", "go": "P0 çıkış kriterleri 1–4", "nogo": "P1'e geçme. Tuning'i 1 sprint daha iterasyonla düzelt"}, {"gate": "G1", "when": "P1 ölçüm sonu (2027-02-28)", "go": "Web kohortu ≥ 1.000 kurulum [VARSAYIM]. D1 ≥ %25, D7 ≥ %8, FTUE ≥ %80, medyan run 90–180 sn", "nogo": "D1 düşükse FTUE/tuning için 2 hafta iterasyon. D7 düşükse P2'den F-025 ve F-027 öne alınır. İki iterasyon sonra hâlâ D1 < %20 ise çekirdek mekanik yeniden değerlendirilir (dönen tahta + süre baskısı)"}, {"gate": "G2 (soft-launch)", "when": "P4 ölçüm sonu (2027-08-15)", "go": "Android, sınırlı GEO. D1 ≥ %30, D7 ≥ %10, D30 ≥ %3 [ARAŞTIRMA S1–S3]. Revive opt-in ≥ %30 [ARAŞTIRMA S7]. Crash-free ≥ %99,5 [VARSAYIM]. Ölçülmüş ARPDAU > 0 ve LTV/CPI hesabı yapılmış", "nogo": "Global/iOS çıkışı yok. Retention zayıfsa P5'ten retention kalemleri, monetizasyon zayıfsa E4 (interstitial) ve IAP deneyleri"}], "sprints": [{"title": "Sprint 1 — 2026-11-02 → 2026-11-15 (hedef 4,5 kişi-gün)", "tasks": [{"n": "1.1", "task": "window.__vortex bloğunu const DEBUG = /[?&]debug=1/.test(location.search) || location.hostname === 'localhost' koşuluna al. setStability yalnızca DEBUG'da", "feat": "F-003", "est": 25.0, "done": "Üretim URL'sinde window.__vortex === undefined", "status": "Bitti 2026-10-26 (smoke: production)"}, {"n": "1.2", "task": "mulberry32(seed) ekle. rng() ile Math.random ayrımı: oynanış = newBlock rengi, fillBoardFresh, spawnColor, rand çağrılarının oynanışı etkileyenleri. Kozmetik (burst, buildBg, dust) Math.random'da kalır. startGame seed atar", "feat": "F-018", "est": 75.0, "done": "Aynı seed → aynı ilk 60 spawn rengi (konsol testi)", "status": "Bitti 2026-10-26 (smoke: fresh)"}, {"n": "1.3", "task": "Save v2: save.v = 2, migrate1to2, settings/stats/daily/inventory/history varsayılanları, bozuk JSON → vortexBlast.save.bak. SAVE_KEY değişmez, sürüm içeride", "feat": "F-002", "est": 15.0, "done": "6 senaryo (boş, v1 tam, v1 eksik alan, bozuk JSON, v2, gelecekteki v3 alanı korunur) elle doğrulandı", "status": "Bitti 2026-10-26 (smoke: 4 senaryo)"}, {"n": "1.4", "task": "GEM_RATE = 0.15 ve gemFrac birikimi. addGems içinde uygulanır. Run sonu kartı tam sayı gösterir. waveUp gem'i de addGems üzerinden geçer (zaten öyle). vb_model.PROPOSED.gem_rate ile eşitlik kontrolü ve progression_compare.md sonucunun gözden geçirilmesi", "feat": "F-044", "est": 10.0, "done": "Model ile aynı formül. 1 casual run'da yaklaşık 40–50 gem (manuel)", "status": "Bitti 2026-10-26 (kod); oyun içi doğrulama bekliyor"}, {"n": "1.5", "task": "Headless smoke scripti: docs/tools/smoke.py. Chrome headless + ?debug=1. Bu oturumda kullanılan probe kalıcı hâle getirilir", "feat": "F-035 (1/2)", "est": 10.0, "done": "Tek komut. Hata 0, blast sonrası skor > 0", "status": "Bitti 2026-10-26 (28/28 PASS)"}]}, {"title": "Sprint 2 — 2026-11-16 → 2026-11-29 (hedef 4,2 kişi-gün)", "tasks": [{"n": "2.1", "task": "Track modülü: kuyruk, localStorage tamponu (≤ 200), navigator.sendBeacon ile 30 sn'de bir/pagehide. Endpoint boşsa yalnızca yerel. Consent bayrağı save.consent.analytics", "feat": "F-001", "est": 15.0, "done": "Event'ler localStorage['vb.q']'da görünüyor. Frame süresine etkisi < 0,2 ms", "status": "Bekliyor"}, {"n": "2.2", "task": "14 event'in tetik noktalarına eklenmesi (GDD §10.1)", "feat": "F-001", "est": 15.0, "done": "Debug overlay'de event sayaçları", "status": "Bekliyor"}, {"n": "2.3", "task": "Parity testi: aynı seed ile JS'te 50 settle sonrası grid renkleri ↔ vb_model.py", "feat": "F-035 (2/2)", "est": 10.0, "done": "Fark 0", "status": "Bekliyor"}, {"n": "2.4", "task": "Sprint 3 hazırlığı: drainRate, doBomb, COMBO_WINDOW, waveScore kontrolünü CFG nesnesine taşı (remote config'in ön adımı, davranış değişmez)", "feat": "F-036 hazırlık", "est": 25.0, "done": "As-built davranış birebir (smoke testi)", "status": "Bekliyor"}]}], "hypotheses": [{"n": "1", "h": "Tek mod (endless), seviye/görev/boss yok", "res": "Doğru", "ev": "state yalnızca title / play / dying / over. Dalga dışında hedef yok (waveUp)"}, {"n": "2", "h": "Toplam upgrade maliyeti ≈ 8,5k", "res": "Doğru: 8.561", "ev": "§6.1 (script). Casual 346 gem/run → 4 run, novice 134 gem/run → 31,5 run (§6.2)"}, {"n": "3", "h": "Müzik, ayarlar ve pause butonu yok", "res": "Doğru", "ev": "Snd yalnızca SFX. Tek ayar save.muted (drawMute, KeyM). Duraklatma yalnızca autoPaused (sekme gizlenince) ve drawer (update: drawerOpen || autoPaused)"}, {"n": "4", "h": "Revive, reklam, IAP, kozmetik yok", "res": "Doğru", "ev": "gameOver doğrudan dying'e geçiyor. Kodda reklam/ödeme çağrısı yok. COLORS sabit"}, {"n": "5", "h": "Günlük ödül, görev, başarım, streak, sezon yok", "res": "Doğru", "ev": "save alanları: gems, best, upg, muted"}, {"n": "6", "h": "FTUE yalnızca ipucu metni", "res": "Doğru", "ev": "drawHUD: üç tip metni (blasts < 2, bombOnBoard, timeAlive < 30 && bombsMade === 0)"}, {"n": "7", "h": "Zorluk yalnızca drain + halka hızı, sabit tahta, yeni blok yok", "res": "Doğru, ek bulgu var", "ev": "drainRate, ringSpeed (wf). Halka hızı dalga 9'da, drain dalga 13'te doyuyor (T2)"}, {"n": "8", "h": "Skor yalnızca yerel best", "res": "Doğru", "ev": "save.best, newBest"}, {"n": "9", "h": "Analytics, remote config, A/B yok", "res": "Doğru", "ev": "Tek dış istek Google Fonts <link>"}, {"n": "10", "h": "Save v1, migration yok, kolay hile, test kancası açık", "res": "Doğru", "ev": "SAVE_KEY = 'vortexBlast.save.v1'. load değerleri sınırlıyor ama checksum yok. window.__vortex.setStability"}, {"n": "11", "h": "PWA yok, Google Fonts harici, paketleme yok", "res": "Doğru, kısmi not", "ev": "Manifest/SW yok. Yalnızca apple-mobile-web-app-capable ve mobile-web-app-capable meta etiketleri var (ana ekran desteği kısmi)"}, {"n": "12", "h": "İkonlar renk körlüğüne yardımcı. Reduced-motion ve sarsıntı/haptik kapatma yok", "res": "Doğru", "ev": "makeIcon (4 farklı şekil). shake/flashA/buzz için ayar yok. prefers-reduced-motion okunmuyor"}, {"n": "13", "h": "Metinler gömülü İngilizce", "res": "Doğru", "ev": "txt(), banner('VORTEX BOMB!'), UPGRADES[].name"}, {"n": "14", "h": "Tek dosya büyüdükçe bakım maliyeti, eşik kararı gerekiyor", "res": "Doğru", "ev": "1442 satır, tek IIFE. Karar: ADR-2 (eşik 2.000 satır veya P3)"}], "issues": [{"n": "T1", "issue": "Bomba döngüsü kendini besliyor: büyük küme → bomba → +20 stabilite → yeni büyük küme", "ev": "Skilled/none: %100 run 900 sn tavanında, run başına medyan 418,5 bomba", "impact": "Run sonsuz, skor tablosu anlamsız"}, {"n": "T2", "issue": "Drain dalga 13'te sabitleniyor, halka hızı dalga 9'da doyuyor", "ev": "drainRate, ringSpeed; dalga tablosu §5", "impact": "Geç oyunda zorluk artmıyor"}, {"n": "T3", "issue": "Skor çarpanı dalga ilerlemesini hızlandırıyor", "ev": "Novice: none 84 sn → max 43 sn", "impact": "\"Boost\" acemi için ceza"}, {"n": "T4", "issue": "Maks. upgrade casual'ı ölümsüzleştiriyor", "ev": "Casual/max: %29 tavan, medyan 671 sn", "impact": "Meta zorluğu kırıyor"}, {"n": "T5", "issue": "Combo penceresi (1,8 sn) tipik dokunma aralığından uzun", "ev": "Casual max combo medyan 123,5", "impact": "Combo bir beceri ifadesi değil"}], "tuningParams": [{"param": "Dalga eşiği hangi skorla", "asBuilt": "Çarpanlı score", "prop": "Çarpansız baseScore", "why": "T3: upgrade zorluğu hızlandırmasın"}, {"param": "Bomba stabilite dolumu", "asBuilt": "20", "prop": "20 (değişmez)", "why": "Tarama (12/16/20) yapıldı. 12'de bir bomba normal blast'tan (3 + 2.4·n) daha az stabilite veriyor, bu yüzden Bomb Threshold upgrade'i run'ları kısaltıyor (maks. upgrade novice 72 sn < 81 sn). T1, drain artışıyla çözülüyor"}, {"param": "Drain tavanı", "asBuilt": "20 %/sn, sonrası düz", "prop": "24 %/sn, tavandan sonra +0,6/dalga", "why": "T1 + T2: geç oyunda baskı sürsün, bomba döngüsü sonsuz olmasın"}, {"param": "Combo penceresi", "asBuilt": "1,8 sn", "prop": "1,3 sn", "why": "T5: combo'yu hız becerisine bağla"}, {"param": "Gem kazanım oranı", "asBuilt": "×1,0", "prop": "×0,15 (kesirli birikim)", "why": "§6: meta ilk oturumda bitmesin"}], "adrs": [{"id": "ADR-1", "q": "Web-first (PWA) mi, store-first mi?", "decision": "(d). P0–P2'de PWA + web ölçümü (retention ve çekirdek doğrulama). P3'te Capacitor Android, P4'te Android soft-launch. iOS, P4 kriterleri geçilince açılır."}, {"id": "ADR-2", "q": "\"Tek dosya / build yok\" ilkesi ne zaman bırakılmalı?", "decision": "Eşik 2.000 satır veya Capacitor (P3), hangisi önce gelirse. P2'de (b) uygulanıyor (F-034): src/*.js modülleri. Dağıtım için tek dosyaya birleştiren 30 satırlık bir Python scripti yazılacak. P3'te Capacitor www/ klasörü bu çıktıyı kullanacak."}, {"id": "ADR-3", "q": "Gelir modeli ağırlığı", "decision": "(c). Rewarded öncelikli (revive, 2× gem), interstitial deneyle eklenir. IAP: no-ads + starter."}, {"id": "ADR-4", "q": "Endless-only mi, görev/seviye katmanı mı?", "decision": "(c). Seviye haritası Later bile değil, kapsam dışı."}, {"id": "ADR-5", "q": "Tek para birimi mi, çift para birimi mi?", "decision": "(c)."}], "benchmarks": [{"metric": "D1 (top %25)", "value": "%26,5–27,7", "scope": "Tüm türler, 2024 verisi", "src": "S1", "rel": "Orta-yüksek"}, {"metric": "D7 medyan", "value": "%3,4–3,9 (top-%25 %7–8)", "scope": "Tüm türler, 2024", "src": "S1", "rel": "Orta-yüksek"}, {"metric": "D28", "value": "Projelerin %75'i < %3", "scope": "Tüm türler, 2024", "src": "S1", "rel": "Orta-yüksek"}, {"metric": "\"İyi\" retention", "value": "D1 ≈ %27; D7 %8–14; D30 %3–7 [ARAŞTIRMA S2]", "scope": "2026, genel", "src": "S2", "rel": "Düşük-orta (pazarlama)"}, {"metric": "Casual puzzle", "value": "D1 %30–40; D7 %10–20; D30 %3–7", "scope": "Tarihsiz", "src": "S3", "rel": "Düşük"}, {"metric": "Hybrid-casual D7 hedefi", "value": "%15–20", "scope": "2025", "src": "S4", "rel": "Orta-düşük"}, {"metric": "Publisher eşiği", "value": "D1 ≥45, D7 ≥15 (puzzle 20), D30 ≥10", "scope": "2023 (eski)", "src": "S5", "rel": "Orta"}, {"metric": "Oturum süresi", "value": "Medyan 5–6 dk; top-%25 8–9 dk", "scope": "2024", "src": "S1", "rel": "Orta-yüksek"}, {"metric": "Oturum/gün", "value": "≈ 4", "scope": "2024", "src": "S1", "rel": "Orta-yüksek"}, {"metric": "Rewarded opt-in", "value": "%30–60", "scope": "Genel", "src": "S7", "rel": "Düşük"}, {"metric": "Rewarded/kullanıcı (puzzle)", "value": "23,4", "scope": "US Android, 06/2024–01/2025", "src": "S6", "rel": "Orta"}, {"metric": "Interstitial/kullanıcı (puzzle)", "value": "72,5", "scope": "Aynı", "src": "S6", "rel": "Orta"}, {"metric": "Rewarded eCPM (US iOS)", "value": "10–25 $", "scope": "2026", "src": "S8", "rel": "Düşük"}, {"metric": "ARPDAU casual/puzzle", "value": "0,03–0,10 $", "scope": "Tarihsiz", "src": "S9", "rel": "Düşük"}], "sources": [{"no": "S1", "title": "GameDev Reports — GameAnalytics: Mobile gaming benchmarks in 2025", "url": "https://gamedevreports.substack.com/p/gameanalytics-mobile-gaming-benchmarks", "rel": "Birincil raporun özeti, 2024 verisi. Orta-yüksek"}, {"no": "S2", "title": "Segwise — Mobile Game User Retention 2026", "url": "https://segwise.ai/blog/mobile-gaming-app-user-retention-strategies.md", "rel": "Vendor blog. Düşük-orta"}, {"no": "S3", "title": "Playio — Retention by game genre", "url": "https://blog.playio.co/retention-by-game-genre", "rel": "Tarihsiz, metodoloji yok. Düşük"}, {"no": "S4", "title": "MAF — Hybrid casual UA strategies", "url": "https://maf.ad/en/blog/hybrid-casual-ua-strategies/", "rel": "AppMagic verisine atıf. Orta-düşük"}, {"no": "S5", "title": "WN Hub — publisher retention eşikleri (2023)", "url": "https://wnhub.io/news/analytics/item-41307", "rel": "Eski (2023). Orta"}, {"no": "S6", "title": "Appodeal — Mobile Casual Benchmarks Report 2025", "url": "https://files.gameindustrylibrary.com/documents/mobile-casual-benchmarks-report-2025.pdf", "rel": "10k+ oyun, US Android. Orta"}, {"no": "S7", "title": "Layer.ai — Rewarded video (glossary)", "url": "https://www.layer.ai/glossary/rewarded-video", "rel": "Sözlük, kaynaksız aralık. Düşük"}, {"no": "S8", "title": "MWM — Rewarded video / Battle pass glossary", "url": "https://mwm.ai/glossary/rewarded-video", "rel": "Sözlük. Düşük"}, {"no": "S9", "title": "Juego Studio — ARPDAU Benchmarks by Genre", "url": "https://www.juegostudio.com/blog/arpdau-benchmarks-by-game-genre", "rel": "Vendor blog. Düşük"}, {"no": "S10", "title": "Cinevva — Casual Games Trends 2026", "url": "https://app.cinevva.com/de/guides/casual-games-trends-2026", "rel": "Sensor Tower/AppMagic'e atıf. Düşük-orta"}, {"no": "S11", "title": "Naavik — How niche subgenres are reshaping the mobile puzzle market", "url": "https://naavik.co/digest/how-niche-subgenres-are-reshaping-the-mobile-puzzle-market/", "rel": "Analist yayını. Orta-yüksek"}, {"no": "S12", "title": "Unity — Impact of rewarded ads on IAP, retention and engagement", "url": "https://unity.com/blog/understanding-the-impact-of-rewarded-ads-on-iap-retention-and-engagement", "rel": "Vendor, korelasyon. Orta"}, {"no": "S13", "title": "Airflux — Are interstitial ads really bad for monetization?", "url": "https://airflux.ai/blog/interstitial-ads-monetization", "rel": "Vendor vaka çalışması. Düşük-orta"}, {"no": "S14", "title": "Playio — Impact of ads on mobile gamers", "url": "https://blog.playio.co/impact-of-ads-on-mobile-gamers", "rel": "İkincil atıf. Düşük"}, {"no": "S15", "title": "Naavik — Royal Match: finding success through iteration", "url": "https://naavik.co/digest/royal-match-finding-success-through-iteration/", "rel": "Analist yayını. Orta-yüksek"}, {"no": "S16", "title": "Medium — Game analysis: Royal Match & Toon Blast", "url": "https://medium.com/@ekinmelissezer/game-analysis-for-royal-match-and-toon-blast-9c4bff8ef48b", "rel": "Bireysel analiz. Düşük-orta"}, {"no": "S17", "title": "Liquid & Grit — Casual reports", "url": "https://www.liquidandgrit.com/category/casual-reports/", "rel": "Sektör bülteni. Orta"}, {"no": "S18", "title": "GameAnalytics blog — ödül/booster tasarımı", "url": "https://gameanalytics.com/?p=15379", "rel": "Analitik vendor. Orta"}, {"no": "S19", "title": "PocketGamer.biz — Block Blast surges past 40m DAU", "url": "https://www.pocketgamer.biz/block-blast-surges-past-40m-daily-active-users", "rel": "Haber. Orta-yüksek"}, {"no": "S20", "title": "Udonis — Block Blast statistics", "url": "https://www.blog.udonis.co/statistics/block-blast", "rel": "Blog. Düşük-orta"}, {"no": "S21", "title": "Chrome Developers — Trusted Web Activity", "url": "https://developer.chrome.com/docs/android/trusted-web-activity", "rel": "Resmî doküman. Yüksek"}, {"no": "S22", "title": "Abratabia — App Store submission for web-wrapped games", "url": "https://www.abratabia.com/native-wrappers/app-store-submission.php", "rel": "Rehber, Apple'dan doğrulanmalı. Düşük-orta"}, {"no": "S23", "title": "Google AdMob — Privacy & messaging (GDPR)", "url": "https://developers.google.com/admob/ios/privacy/gdpr", "rel": "Resmî doküman. Yüksek"}, {"no": "S24", "title": "Google Play — Families Self-Certified Ads SDK Policy", "url": "https://support.google.com/googleplay/android-developer/answer/12918983", "rel": "Resmî. Yüksek"}, {"no": "S25", "title": "Google Play — Families policies", "url": "https://support.google.com/googleplay/android-developer/answer/9893335", "rel": "Resmî. Yüksek"}, {"no": "S26", "title": "Erdem & Erdem — KVKK'da Değişiklik", "url": "https://www.erdem-erdem.av.tr/bilgi-bankasi/kisisel-verilerin-korunmasi-kanununda-degisiklik", "rel": "Hukuk bürosu. Orta-yüksek"}, {"no": "S27", "title": "EY — 2025 yılında dijital hukuk alanındaki gelişmeler", "url": "https://www.ey.com/content/dam/ey-unified-site/ey-com/tr-tr/services/law/documents/ey-2025-yilinda-dijital-hukuk-alaninda-yasanan-gelismeler.pdf", "rel": "Danışmanlık. Orta"}, {"no": "S28", "title": "MagicBell — PWA iOS limitations and Safari support", "url": "https://www.magicbell.com/blog/pwa-ios-limitations-safari-support-complete-guide", "rel": "Vendor rehberi. Orta"}, {"no": "S29", "title": "Sensor Tower — Puzzle games creative trends", "url": "https://sensortower.com/blog/puzzle-games-creative-trends", "rel": "2023 (eski). Orta"}, {"no": "S30", "title": "GameDev Reports — AppMagic: Top-10 hybrid-casual games Q2'25", "url": "https://gamedevreports.substack.com/p/appmagic-top-10-hybrid-casual-games", "rel": "AppMagic özeti. Orta"}, {"no": "S31", "title": "Mobidictum — Battle pass trendi (GameRefinery)", "url": "https://mobidictum.com/tr/roblox-pazar-payini-yukseltirken-yeni-trend-battle-pass-oldu/", "rel": "Haber. Orta"}], "summary15": ["Puzzle büyüyen bir kategori: 2025'te mobil puzzle yaklaşık 9,7 milyar indirme ve yaklaşık 10 milyar $ IAP geliri yaptı (+%14 YoY). Büyümenin yaklaşık %60'ı Merge-2'den, kalanı Sort/Screw/Block gibi niş alt türlerden geldi. [ARAŞTIRMA S11] Sonuç: \"küçük ama anlamlı twist\" içeren niş mekanikler hâlâ yer bulabiliyor.", "Hybrid-casual puzzle IAP'ı yükselen bir hat (AppMagic Q2'25: top-10 hybrid-casual gelirinin %50'sinden fazlası puzzle). [ARAŞTIRMA S30] Saf reklam (IAA) modeli tek başına artık norm değil. Hibrit modele geçiş 2023'te başlamıştı: hybrid-casual puzzle geliri yıllık yaklaşık %430 arttı (eski) [ARAŞTIRMA S29].", "Retention çıtası düşüyor ama puzzle görece iyi: GameAnalytics 2025 (2024 verisi): D1 top-%25 ≈ %26,5–27,7; D7 medyan ≈ %3,4–3,9 (top-%25 ≈ %7–8). Projelerin %75'inde D28 < %3. Puzzle, uzun vadeli retention'da en iyi türler arasında. [ARAŞTIRMA S1]", "Hybrid-casual hedefleri daha yüksek: D7 için %15–20 (Mob Control D7 %25,1). [ARAŞTIRMA S4] 2023'te bir publisher'ın eşikleri D1 ≥%45, D7 ≥%15 (puzzle %20), D30 ≥%10 idi (eski). [ARAŞTIRMA S5]", "Oturum süresi: Medyan oturum 5–6 dk, top-%25 8–9 dk, günde yaklaşık 4 oturum. [ARAŞTIRMA S1] Vortex Blast'ın as-built run süresi casual oyuncu modelinde yaklaşık 2 dk (bkz. GDD §5). Kısa run'lar oturum başına 2–3 run'a karşılık gelir. Bu, hybrid-casual için uygun.", "Reklam hacmi: Puzzle türü yoğun reklam alıyor. US Android'de kullanıcı başına 72,5 interstitial ve 23,4 rewarded izlenmiş. [ARAŞTIRMA S6]", "Rewarded opt-in oranı genel olarak %30–60, tamamlama oranı %85–95 (puzzle'a özel kaynak yok). [ARAŞTIRMA S7]", "eCPM ve ARPDAU: US rewarded eCPM yaklaşık 10–25 $ (2026). [ARAŞTIRMA S8] Casual/puzzle ARPDAU yaklaşık 0,03–0,10 $. [ARAŞTIRMA S9] Bunlar bölgeye çok bağlı. TR ve gelişmekte olan pazarlarda çok daha düşük [VARSAYIM].", "Rewarded izleyen oyuncular daha sadık: İlk hafta 1 rewarded izleyenlerin D30'u ≥%50, benchmark %13. Bu bir korelasyon, nedensellik değil. [ARAŞTIRMA S12]", "Interstitial etkisi tartışmalı: Bir deneyde frekans 1,6× artırılınca IS geliri %23, IAP geliri %9 arttı [ARAŞTIRMA S13]. Başka bir kaynak, oturum başına 3 altı interstitial'da %27 daha yüksek retention bildiriyor [ARAŞTIRMA S14]. Sonuç: frekans üst sınırı A/B ile belirlenmeli.", "Hafif meta + win-streak + booster: Royal Match bilinçli olarak hafif meta tuttu [ARAŞTIRMA S15]. Win-streak booster'ları (Butler's Gift) [ARAŞTIRMA S16] ve Toon Blast'ın streak özelliği (%12 aylık gelir etkisi) [ARAŞTIRMA S17]. Vortex Blast'ın \"tek run\" yapısına uyarlanabilir.", "Aynı ödülü tekrarlayan günlük çark etkisini kaybeder. Ödül çeşitliliği gerekli. [ARAŞTIRMA S18]", "Dağıtım: TWA, Chrome 72+ ve Digital Asset Links ile PWA'yı Play'e taşır [ARAŞTIRMA S21]. Apple için yalnızca uzak URL yükleyen sarmalayıcı 4.2 (minimum işlev) riski taşır. Varlıkları yerel paketlemek ve native özellik eklemek önerilir. [ARAŞTIRMA S22] iOS PWA'da beforeinstallprompt yok, web push yalnızca ana ekrana eklenmiş uygulamada. [ARAŞTIRMA S28]", "Uyumluluk: Google, EEA/UK'de 2024-01-16'dan beri sertifikalı CMP istiyor. Aksi hâlde yalnızca \"Limited Ads\" gösteriliyor. Önce GDPR mesajı, sonra ATT gösteriliyor. [ARAŞTIRMA S23] Çocuklara yönelik veya karma kitlede self-certified ads SDK ve yaş kapısı gerekiyor. [ARAŞTIRMA S24, S25] KVKK 2024 değişikliğiyle yurt dışı aktarımda açık rıza yalnızca \"arızi\" aktarımla sınırlandı. Reklam ve analitik SDK'ları için standart sözleşme gerekiyor. [ARAŞTIRMA S26]", "Dönen halka + halkalar arası eşleşme için doğrudan rakip verisi bulunamadı. Zuma tarzı veya dönen halka alt türüne dair indirme/gelir verisi yok. [VARSAYIM] Bu boşluk hem fırsat (ayırt edici) hem risk (pazarda kanıtlanmamış mekanik). Soft-launch'ta CPI ve D1 ile test edilmeli."], "kpis": [{"kpi": "D1", "target": "≥ %30", "src": "S1, S3"}, {"kpi": "D7", "target": "≥ %10", "src": "S2, S3"}, {"kpi": "D30", "target": "≥ %3", "src": "S1–S3"}, {"kpi": "Medyan run", "target": "90–180 sn", "src": "§5.1"}, {"kpi": "Oturum başına run", "target": "≥ 2,5", "src": "[VARSAYIM]"}, {"kpi": "FTUE tamamlama", "target": "≥ %80", "src": "[VARSAYIM]"}, {"kpi": "Rewarded opt-in (revive)", "target": "≥ %30", "src": "S7 alt sınırı"}], "assumptions": [{"n": "V1", "a": "Ekip 1 geliştirici + Claude Code, 20 sa/hafta (2,5 kişi-gün), %20 tampon", "where": "Roadmap kapasitesi"}, {"n": "V2", "a": "UA bütçesi yaklaşık 0, organik + küçük test", "where": "Roadmap R3, G1 eşiği"}, {"n": "V3", "a": "Oyuncu botlarının tap aralıkları ve seçim stratejileri (novice/casual/skilled)", "where": "Tüm model çıktıları"}, {"n": "V4", "a": "Oyuncu her run sonunda en ucuz alınabilir upgrade'i alır", "where": "İlerleme simülasyonu"}, {"n": "V5", "a": "Web kohort retention'ı store kohortunun yaklaşık %80'i", "where": "G1 hedefleri (D1 %25 / D7 %8)"}, {"n": "V6", "a": "Gelir senaryosu: 1,2 RV + 0,8 IS / DAU, eCPM 8 $ / 5 $", "where": "GDD §9.2"}, {"n": "V7", "a": "IAP fiyatları (no-ads 2,99 $, starter 1,99 $)", "where": "GDD §9.3"}, {"n": "V8", "a": "Yeni upgrade maliyet formülleri ve yeni blok spawn oranları", "where": "GDD §4, §6.4"}, {"n": "V9", "a": "Hedef kitle 18–45, global", "where": "GDD §1"}, {"n": "V10", "a": "G1 için 1.000 kurulum yeterli örneklem", "where": "Roadmap §5"}, {"n": "V11", "a": "Crash-free ≥ %99,5 eşiği", "where": "G2"}, {"n": "V12", "a": "Türkiye/gelişen pazar eCPM'i küresel aralığın altında", "where": "00_RESEARCH madde 8"}]};
+const nf = new Intl.NumberFormat('tr-TR');
+const nf1 = new Intl.NumberFormat('tr-TR', {maximumFractionDigits: 1});
+const $ = s => document.querySelector(s);
+const NS = 'http://www.w3.org/2000/svg';
+function h(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const k in attrs || {}) { if (k === 'class') e.className = attrs[k]; else if (k === 'text') e.textContent = attrs[k]; else e.setAttribute(k, attrs[k]); }
+  for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : document.createTextNode(String(c)));
+  return e;
+}
+function s(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) { if (k === 'text') e.textContent = attrs[k]; else e.setAttribute(k, attrs[k]); }
+  if (parent) parent.append(e);
+  return e;
+}
+const days = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
+const byId = Object.fromEntries(D.backlog.map(f => [f.id, f]));
+const phaseChip = p => h('span', {class: 'chip ph', text: p});
+
+/* ---------- generic table ---------- */
+function table(el, cols, rows, opt = {}) {
+  el.textContent = '';
+  const thead = h('thead'), tr = h('tr');
+  cols.forEach(c => tr.append(h('th', {class: c.r ? 'r' : '', scope: 'col'}, opt.sort ? h('button', {type: 'button', text: c.t}) : c.t)));
+  thead.append(tr); el.append(thead);
+  const tb = h('tbody'); el.append(tb);
+  let sortKey = opt.sortKey, dir = opt.dir || -1;
+  function render() {
+    tb.textContent = '';
+    let rs = rows.slice();
+    if (opt.filter) rs = rs.filter(opt.filter);
+    if (sortKey) { const c = cols.find(c => c.k === sortKey); rs.sort((a, b) => { const x = c.v ? c.v(a) : a[c.k], y = c.v ? c.v(b) : b[c.k]; return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'tr')) * dir; }); }
+    rs.forEach(r => {
+      const row = h('tr', opt.onRow ? {class: 'rowlink', tabindex: '0'} : {});
+      cols.forEach(c => { const v = c.f ? c.f(r) : r[c.k]; row.append(h('td', {class: c.r ? 'r num' : ''}, v == null ? '—' : v)); });
+      tb.append(row);
+      if (opt.onRow) {
+        const toggle = () => { const nx = row.nextSibling; if (nx && nx.classList.contains('detail')) nx.remove(); else row.after(opt.onRow(r, cols.length)); };
+        row.addEventListener('click', toggle);
+        row.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+      }
+    });
+    thead.querySelectorAll('th').forEach((th, i) => th.setAttribute('aria-sort', cols[i].k === sortKey ? (dir > 0 ? 'ascending' : 'descending') : 'none'));
+  }
+  if (opt.sort) thead.querySelectorAll('th button').forEach((b, i) => b.addEventListener('click', () => {
+    if (sortKey === cols[i].k) dir = -dir; else { sortKey = cols[i].k; dir = cols[i].r ? -1 : 1; } render();
+  }));
+  render();
+  return {render};
+}
+
+/* ---------- tooltip ---------- */
+function tipFor(box) {
+  const t = h('div', {class: 'tip', role: 'status'}); box.append(t);
+  return {
+    show(ev, title, lines) {
+      t.textContent = ''; t.append(h('b', {text: title})); lines.forEach(l => t.append(h('div', {text: l})));
+      const r = box.getBoundingClientRect(); let x = ev.clientX - r.left + 12, y = ev.clientY - r.top - 10;
+      t.style.opacity = 1; const w = t.offsetWidth;
+      if (x + w > r.width) x = Math.max(0, ev.clientX - r.left - w - 12);
+      t.style.left = x + 'px'; t.style.top = y + 'px';
+    },
+    hide() { t.style.opacity = 0; }
+  };
+}
+function svgIn(box, H) {
+  box.textContent = '';
+  const W = Math.max(280, box.clientWidth || 600);
+  const svg = s('svg', {viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img'});
+  box.append(svg);
+  return {svg, W, H, tip: tipFor(box)};
+}
+function niceMax(v) { const p = Math.pow(10, Math.floor(Math.log10(v))); return Math.ceil(v / p) * p; }
+function yAxis(svg, x0, x1, y, max, ticks, fmt) {
+  const g = s('g', {class: 'grid'}, svg);
+  for (let i = 0; i <= ticks; i++) {
+    const v = max * i / ticks, yy = y(v);
+    s('line', {x1: x0, x2: x1, y1: yy, y2: yy}, g);
+    s('text', {x: x0 - 6, y: yy + 4, 'text-anchor': 'end', text: fmt(v)}, svg);
+  }
+}
+
+/* ---------- header ---------- */
+$('#meta').textContent = `Veri: ${D.generated} · index.html ${D.hash['index.html']} · Bugün ${D.today}`;
+$('#foot').textContent = 'Tüm sayılar docs/tools çıktılarından ve docs/*.md tablolarından üretildi. Güncellemek için: python vb_analysis.py && python vb_proposed.py && python backlog.py && python build_docs.py && python build_dashboard.py';
+
+/* ---------- ÖZET ---------- */
+const P = D.phases, start = P[0].start, end = P[P.length - 1].end;
+const cur = P.find(p => D.today >= p.start && D.today <= p.end);
+const toStart = days(D.today, start);
+const totalEffort = P.reduce((a, p) => a + p.effort, 0);
+const sb = $('#statusbar');
+[['Durum', cur ? `${cur.p} · ${cur.name}` : (toStart > 0 ? 'Başlamadı' : 'Plan bitti')],
+ ['Başlangıca', toStart > 0 ? `${toStart} gün` : '—'],
+ ['Plan bitişi', end],
+ ['P0–P4 iş yükü', `${nf1.format(totalEffort)} kişi-gün`],
+ ['Backlog', `${D.backlog.length} özellik`]].forEach(([k, v]) => sb.append(h('div', {}, h('div', {class: 'k', text: k}), h('div', {class: 'v num', text: v}))));
+
+const T = (t, cfg, bot) => D.tuning.find(r => r.t === t && r.cfg === cfg && r.bot === bot);
+const PC = (t, bot) => D.progCompare.find(r => r.t === t && r.bot === bot);
+const SIM = (cfg, bot) => D.sim.find(r => r.cfg === cfg && r.bot === bot);
+const comboA = T('AS-BUILT', 'none', 'casual').combo, comboP = T('ÖNERİ', 'none', 'casual').combo;
+$('#ozet-lede').append('Oyunun mevcut hâlinde dört denge sorunu var. Önerilen ayar seti ',
+  h('b', {text: 'üçünü çözüyor'}), ', combo sorunu açık kalıyor. Plan ', h('b', {text: start}), ' Pazartesi başlıyor, ilk iş hile kancasını kapatıp ölçüm altyapısını kurmak.');
+const F = [
+  {cls: 'ok', t: 'Meta ilk oturumda bitiyor', b: PC('AS-BUILT', 'casual').runs, bu: 'run', a: PC('ÖNERİ', 'casual').runs, au: 'run',
+   d: `Tüm upgrade'ler ${nf.format(D.upgradeTotal)} gem. Casual oyuncu as-built'te ${nf.format(PC('AS-BUILT', 'casual').minutes)} dakikada hepsini alıyor. Öneriyle ${nf.format(PC('ÖNERİ', 'casual').minutes)} dk. Hedef 100+ run için yeni upgrade'ler de gerekli.`, chip: ['warn', 'Kısmen çözüldü']},
+  {cls: 'ok', t: 'Yetenekli oyuncu hiç ölmüyor', b: T('AS-BUILT', 'none', 'skilled').capped, bu: '% tavanda', a: T('ÖNERİ', 'none', 'skilled').capped, au: '% tavanda',
+   d: `Drain dalga 13'te sabitleniyor, bombalar stabiliteyi dolduruyor. Öneri: tavandan sonra drain artmaya devam ediyor. Skilled medyan run ${nf.format(T('ÖNERİ', 'none', 'skilled').dur)} sn.`, chip: ['ok', 'Çözüldü']},
+  {cls: 'ok', t: 'Skor boost\'u acemiyi cezalandırıyor', b: T('AS-BUILT', 'max', 'novice').dur, bu: 'sn', a: T('ÖNERİ', 'max', 'novice').dur, au: 'sn',
+   d: `Tam upgrade'li acemi oyuncunun medyan run süresi. Upgrade'siz değer ${nf.format(T('AS-BUILT', 'none', 'novice').dur)} sn. Öneri dalga eşiğini çarpansız skora bağlıyor.`, chip: ['ok', 'Çözüldü']},
+  {cls: 'bad', t: 'Combo pratikte hiç kopmuyor', b: comboA, bu: 'max combo', a: comboP, au: 'max combo',
+   d: 'Casual botta medyan max combo. Combo penceresi 1,8 sn\'den 1,3 sn\'ye indi ama yetmedi. Deney E2 1,1 sn\'yi test edecek.', chip: ['bad', 'Açık']},
+];
+F.forEach(f => $('#findings').append(h('div', {class: `panel finding ${f.chip[0]}`},
+  h('div', {style: 'display:flex;justify-content:space-between;gap:8px;align-items:start'}, h('h3', {text: f.t}), h('span', {class: `chip ${f.chip[0]}`, text: f.chip[1]})),
+  h('div', {class: 'ba'},
+    h('div', {}, h('span', {class: 'big num', text: nf.format(f.b)}), h('small', {text: 'as-built · ' + f.bu})),
+    h('span', {class: 'arrow', text: '→'}),
+    h('div', {}, h('span', {class: 'after num', text: nf.format(f.a)}), h('small', {text: 'öneri · ' + f.au}))),
+  h('p', {class: 'note', style: 'margin:0', text: f.d}))));
+
+const isDone = t => /^Bitti/.test(t.status || '');
+const statusChip = t => h('span', {class: 'chip ' + (isDone(t) ? 'ok' : ''), title: t.status || '', text: isDone(t) ? 'Bitti' : 'Bekliyor'});
+// "Sıradaki iş" = the first sprint that still has open tasks
+const NEXT = D.sprints.find(sp => sp.tasks.some(t => !isDone(t))) || D.sprints[D.sprints.length - 1];
+const nDone = sp => sp.tasks.filter(isDone).length;
+$('#s1-title').textContent = 'Sıradaki iş: ' + NEXT.title.split(' — ')[0];
+$('#s1-note').textContent = `${NEXT.title} · ${nDone(NEXT)}/${NEXT.tasks.length} görev bitti · ${nf1.format(NEXT.tasks.reduce((a, t) => a + t.est, 0))} kişi-gün` +
+  D.sprints.filter(sp => sp !== NEXT && nDone(sp) === sp.tasks.length).map(sp => ` · ${sp.title.split(' — ')[0]} tamamlandı`).join('');
+table($('#s1-table'), [{t: 'Görev', k: 'task', f: r => r.task.length > 120 ? r.task.slice(0, 118) + '…' : r.task}, {t: 'Özellik', k: 'feat'}, {t: 'Gün', k: 'est', r: 1, f: r => nf1.format(r.est)}, {t: 'Durum', k: 'status', f: statusChip}], NEXT.tasks);
+table($('#kpi-table'), [{t: 'KPI', k: 'kpi'}, {t: 'Hedef', k: 'target'}, {t: 'Kaynak', k: 'src'}], D.kpis);
+table($('#gates-table'), [{t: 'Kapı', k: 'gate'}, {t: 'Zaman', k: 'when'}, {t: 'Go kriterleri', k: 'go'}, {t: 'No-Go olursa', k: 'nogo'}], D.gates);
+
+/* ---------- DENGE ---------- */
+function drawDur() {
+  const {svg, W, H, tip} = svgIn($('#c-dur'), 300);
+  const m = {l: 44, r: 8, t: 12, b: 46}, iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const groups = []; ['none', 'max'].forEach(cfg => ['novice', 'casual', 'skilled'].forEach(bot => groups.push({cfg, bot})));
+  const y = v => m.t + ih - v / 900 * ih;
+  yAxis(svg, m.l, W - m.r, y, 900, 6, v => nf.format(v));
+  s('rect', {x: m.l, y: y(180), width: iw, height: y(90) - y(180), fill: 'var(--ok)', opacity: .12}, svg);
+  const gw = iw / groups.length, bw = Math.min(32, gw * .3);
+  groups.forEach((g, i) => {
+    const cx = m.l + gw * i + gw / 2;
+    ['AS-BUILT', 'ÖNERİ'].forEach((t, j) => {
+      const r = T(t, g.cfg, g.bot), x = cx + (j ? 3 : -3 - bw);
+      const bar = s('rect', {x, y: y(r.dur), width: bw, height: y(0) - y(r.dur), rx: 4, fill: j ? 'var(--accent)' : 'var(--asbuilt)', class: 'bar-in', style: `transform-origin:0 ${y(0)}px`}, svg);
+      s('line', {x1: x + bw / 2, x2: x + bw / 2, y1: y(r.p10), y2: y(r.p90), stroke: 'var(--ink)', 'stroke-width': 1.5, opacity: .55}, svg);
+      const lines = [`Medyan ${nf.format(r.dur)} sn (p10–p90 ${nf.format(r.p10)}–${nf.format(r.p90)})`, `Dalga medyan ${nf1.format(r.wave)}`, `900 sn tavanında: %${nf.format(r.capped)}`, `Gem/run ${nf1.format(r.gems)}`];
+      bar.addEventListener('mousemove', e => tip.show(e, `${t} · ${g.bot} · upgrade ${g.cfg}`, lines));
+      bar.addEventListener('mouseleave', tip.hide);
+      if (r.capped >= 50) s('text', {x: x + bw / 2, y: y(r.dur) - 5, 'text-anchor': 'middle', class: 'lbl', text: '∞'}, svg);
+    });
+    s('text', {x: cx, y: H - m.b + 18, 'text-anchor': 'middle', class: 'lbl', text: g.bot}, svg);
+  });
+  s('text', {x: m.l + iw / 4, y: H - 6, 'text-anchor': 'middle', text: 'Upgrade yok'}, svg);
+  s('text', {x: m.l + iw * 3 / 4, y: H - 6, 'text-anchor': 'middle', text: 'Tüm upgrade\'ler maksimum'}, svg);
+  s('line', {x1: m.l + iw / 2, x2: m.l + iw / 2, y1: m.t, y2: H - m.b + 26, stroke: 'var(--line)'}, svg);
+}
+function drawDrain() {
+  const {svg, W, H, tip} = svgIn($('#c-drain'), 240);
+  const m = {l: 34, r: 10, t: 12, b: 30}, iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const x = w => m.l + (w - 1) / 19 * iw, y = v => m.t + ih - v / 25 * ih;
+  yAxis(svg, m.l, W - m.r, y, 25, 5, v => nf.format(v));
+  [1, 5, 9, 13, 17, 20].forEach(w => s('text', {x: x(w), y: H - 10, 'text-anchor': 'middle', text: w}, svg));
+  const line = (key, k, col) => s('path', {d: D.waves.map((r, i) => (i ? 'L' : 'M') + x(r.wave) + ',' + y(r[key] * k)).join(''), fill: 'none', stroke: col, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round'}, svg);
+  line('drain', 1, 'var(--red)'); line('breakeven', 10, 'var(--blue)');
+  s('line', {x1: x(13), x2: x(13), y1: m.t, y2: m.t + ih, stroke: 'var(--muted)', 'stroke-dasharray': '4 4'}, svg);
+  s('text', {x: x(13) + 4, y: m.t + 12, text: 'tavan (dalga 13)'}, svg);
+  s('line', {x1: m.l, x2: W - m.r, y1: y(10.3), y2: y(10.3), stroke: 'var(--blue)', 'stroke-dasharray': '2 4', opacity: .7}, svg);
+  s('text', {x: W - m.r, y: y(10.3) - 5, 'text-anchor': 'end', text: 'casual bot 1,03 blast/sn'}, svg);
+  D.waves.forEach(r => {
+    const hit = s('rect', {x: x(r.wave) - iw / 38, y: m.t, width: iw / 19, height: ih, fill: 'transparent'}, svg);
+    hit.addEventListener('mousemove', e => tip.show(e, `Dalga ${r.wave}`, [`Drain %${nf1.format(r.drain)}/sn`, `Başabaş ${nf1.format(r.breakeven)} blast/sn`, `Halka hızı ×${nf1.format(r.speed)}`, `Eşik ${nf.format(r.cum)} skor`]));
+    hit.addEventListener('mouseleave', tip.hide);
+  });
+}
+function drawReach() {
+  const {svg, W, H, tip} = svgIn($('#c-reach'), 240);
+  const m = {l: 34, r: 8, t: 12, b: 30}, iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const bw = iw / 20, y = v => m.t + ih - v / 200 * ih;
+  yAxis(svg, m.l, W - m.r, y, 200, 4, v => nf.format(v));
+  D.waves.forEach((r, i) => {
+    const danger = r.death >= 30;
+    const b = s('rect', {x: m.l + i * bw + 2, y: y(r.reached), width: Math.max(2, bw - 4), height: y(0) - y(r.reached), rx: 3, fill: danger ? 'var(--bad)' : 'var(--accent)', opacity: danger ? 1 : .8, class: 'bar-in', style: `transform-origin:0 ${y(0)}px`}, svg);
+    if ([1, 5, 10, 13, 15, 20].includes(r.wave)) s('text', {x: m.l + i * bw + bw / 2, y: H - 10, 'text-anchor': 'middle', text: r.wave}, svg);
+    b.addEventListener('mousemove', e => tip.show(e, `Dalga ${r.wave}`, [`Ulaşan run: ${r.reached}/200`, `Bu dalgada ölüm: %${nf.format(r.death)}`, r.tMed != null ? `Dalgada medyan ${nf1.format(r.tMed)} sn` : 'Süre için örneklem az']));
+    b.addEventListener('mouseleave', tip.hide);
+  });
+}
+table($('#issues-table'), [{t: '#', k: 'n'}, {t: 'Sorun', k: 'issue'}, {t: 'Kanıt', k: 'ev'}], D.issues);
+table($('#params-table'), [{t: 'Parametre', k: 'param'}, {t: 'As-built', k: 'asBuilt'}, {t: 'Öneri', k: 'prop'}], D.tuningParams);
+table($('#tuning-table'), [
+  {t: 'Ayar', k: 't'}, {t: 'Upgrade', k: 'cfg'}, {t: 'Bot', k: 'bot'},
+  {t: 'Süre medyan', k: 'dur', r: 1, f: r => nf.format(r.dur) + ' sn'}, {t: 'p10–p90', k: 'p10', r: 1, f: r => `${nf.format(r.p10)}–${nf.format(r.p90)}`},
+  {t: 'Tavanda', k: 'capped', r: 1, f: r => h('span', {class: 'chip ' + (r.capped > 0 ? 'bad' : 'ok'), text: '%' + nf.format(r.capped)})},
+  {t: 'Dalga', k: 'wave', r: 1, f: r => nf1.format(r.wave)}, {t: 'Gem/run', k: 'gems', r: 1, f: r => nf1.format(r.gems)}, {t: 'Max combo', k: 'combo', r: 1, f: r => nf1.format(r.combo)}], D.tuning);
+
+/* ---------- EKONOMİ ---------- */
+$('#eko-lede').append('Upgrade\'lerin toplamı ', h('b', {class: 'num', text: nf.format(D.upgradeTotal) + ' gem'}),
+  `. As-built'te casual bir oyuncu run başına ortalama ${nf.format(SIM('none', 'casual').gems)} gem kazanıyor ve hepsini ${nf.format(PC('AS-BUILT', 'casual').runs)} run'da bitiriyor. Önerilen 0,15 gem oranıyla bu ${nf1.format(PC('ÖNERİ', 'casual').runs)} run'a çıkıyor.`);
+function drawCost() {
+  const {svg, W, H, tip} = svgIn($('#c-cost'), 170);
+  const keys = ['mult', 'magnet', 'bomb'], names = {mult: 'Gem & Score Boost', magnet: 'Alignment Magnet', bomb: 'Bomb Threshold'};
+  const cols = {mult: 'var(--yellow)', magnet: 'var(--red)', bomb: 'var(--accent)'};
+  const tot = k => D.upgradeCosts.filter(r => r.key === k).reduce((a, r) => a + r.cost, 0);
+  const max = niceMax(Math.max(...keys.map(tot)));
+  const m = {l: 132, r: 60, t: 6, b: 24}, iw = W - m.l - m.r, rowH = (H - m.t - m.b) / 3;
+  const x = v => m.l + v / max * iw;
+  keys.forEach((k, i) => {
+    const yy = m.t + i * rowH + rowH * .2, bh = rowH * .6; let acc = 0;
+    s('text', {x: m.l - 8, y: yy + bh / 2 + 4, 'text-anchor': 'end', class: 'lbl', text: names[k]}, svg);
+    D.upgradeCosts.filter(r => r.key === k).forEach((r, j) => {
+      const seg = s('rect', {x: x(acc) + .5, y: yy, width: Math.max(1, x(acc + r.cost) - x(acc) - 1), height: bh, rx: 3, fill: cols[k], opacity: .55 + .45 * ((j % 2) ? .6 : 1)}, svg);
+      seg.addEventListener('mousemove', e => tip.show(e, `${names[k]} ${r.step}`, [`${nf.format(r.cost)} gem`, `Kümülatif ${nf.format(r.cum)}`]));
+      seg.addEventListener('mouseleave', tip.hide);
+      acc += r.cost;
+    });
+    s('text', {x: x(acc) + 6, y: yy + bh / 2 + 4, class: 'lbl num', text: nf.format(acc)}, svg);
+  });
+  [0, max / 2, max].forEach(v => s('text', {x: x(v), y: H - 6, 'text-anchor': 'middle', text: nf.format(v)}, svg));
+}
+function drawProg() {
+  const {svg, W, H, tip} = svgIn($('#c-prog'), 170);
+  const bots = ['novice', 'casual'];
+  const max = niceMax(Math.max(...D.progCompare.map(r => r.runs)));
+  const m = {l: 64, r: 70, t: 6, b: 24}, iw = W - m.l - m.r, rowH = (H - m.t - m.b) / bots.length;
+  const x = v => m.l + v / max * iw;
+  bots.forEach((b, i) => {
+    s('text', {x: m.l - 8, y: m.t + i * rowH + rowH / 2 + 4, 'text-anchor': 'end', class: 'lbl', text: b}, svg);
+    ['AS-BUILT', 'ÖNERİ'].forEach((t, j) => {
+      const r = PC(t, b), yy = m.t + i * rowH + rowH * .12 + j * rowH * .4, bh = rowH * .34;
+      const bar = s('rect', {x: m.l, y: yy, width: Math.max(2, x(r.runs) - m.l), height: bh, rx: 4, fill: j ? 'var(--accent)' : 'var(--asbuilt)'}, svg);
+      s('text', {x: x(r.runs) + 6, y: yy + bh / 2 + 4, class: 'num', text: `${nf1.format(r.runs)} run · ${nf.format(r.minutes)} dk`}, svg);
+      bar.addEventListener('mousemove', e => tip.show(e, `${t} · ${b}`, [`${nf1.format(r.runs)} run`, `${nf.format(r.minutes)} dakika oyun`]));
+      bar.addEventListener('mouseleave', tip.hide);
+    });
+  });
+  [0, max / 2, max].forEach(v => s('text', {x: x(v), y: H - 6, 'text-anchor': 'middle', text: nf.format(v)}, svg));
+}
+table($('#sim-table'), [
+  {t: 'Upgrade', k: 'cfg'}, {t: 'Bot', k: 'bot'}, {t: 'Süre medyan', k: 'dur', r: 1, f: r => nf.format(r.dur) + ' sn'},
+  {t: 'Tavanda', k: 'capped', r: 1, f: r => '%' + nf.format(r.capped)}, {t: 'Dalga', k: 'wave', r: 1, f: r => nf1.format(r.wave)},
+  {t: 'Skor medyan', k: 'score', r: 1, f: r => nf.format(r.score)}, {t: 'Gem/run', k: 'gems', r: 1, f: r => nf1.format(r.gems)},
+  {t: 'Blast/sn', k: 'bps', r: 1, f: r => nf1.format(r.bps)}, {t: 'Ort. küme', k: 'avgN', r: 1, f: r => nf1.format(r.avgN)},
+  {t: 'Bomba/run', k: 'bombs', r: 1, f: r => nf1.format(r.bombs)}, {t: 'Max combo', k: 'combo', r: 1, f: r => nf1.format(r.combo)}], D.sim);
+
+/* ---------- BACKLOG ---------- */
+const PH = ['P0', 'P1', 'P2', 'P3', 'P4', 'Later'];
+function drawPhase() {
+  const {svg, W, H, tip} = svgIn($('#c-phase'), 200);
+  const tot = PH.map(p => ({p, e: D.backlog.filter(f => f.phase === p).reduce((a, f) => a + f.E, 0), n: D.backlog.filter(f => f.phase === p).length}));
+  const max = niceMax(Math.max(...tot.map(t => t.e)));
+  const m = {l: 48, r: 60, t: 4, b: 4}, iw = W - m.l - m.r, rowH = (H - m.t - m.b) / tot.length;
+  tot.forEach((t, i) => {
+    const yy = m.t + i * rowH + rowH * .18, bh = rowH * .64, w = Math.max(2, t.e / max * iw);
+    s('text', {x: m.l - 8, y: yy + bh / 2 + 4, 'text-anchor': 'end', class: 'lbl', text: t.p}, svg);
+    const b = s('rect', {x: m.l, y: yy, width: w, height: bh, rx: 4, fill: t.p === 'Later' ? 'var(--asbuilt)' : 'var(--accent)'}, svg);
+    s('text', {x: m.l + w + 6, y: yy + bh / 2 + 4, class: 'num', text: nf1.format(t.e) + ' kg'}, svg);
+    b.addEventListener('mousemove', e => tip.show(e, t.p, [`${t.n} özellik`, `${nf1.format(t.e)} kişi-gün`]));
+    b.addEventListener('mouseleave', tip.hide);
+  });
+}
+function drawCat() {
+  const {svg, W, H, tip} = svgIn($('#c-cat'), 330);
+  const cats = {}; D.backlog.forEach(f => cats[f.cat] = (cats[f.cat] || 0) + 1);
+  const rows = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+  const max = Math.max(...rows.map(r => r[1]));
+  const m = {l: 168, r: 30, t: 2, b: 2}, iw = W - m.l - m.r, rowH = (H - m.t - m.b) / rows.length;
+  rows.forEach(([c, n], i) => {
+    const yy = m.t + i * rowH + rowH * .15, bh = rowH * .7;
+    s('text', {x: m.l - 8, y: yy + bh / 2 + 4, 'text-anchor': 'end', text: c}, svg);
+    const b = s('rect', {x: m.l, y: yy, width: n / max * iw, height: bh, rx: 3, fill: 'var(--accent)', opacity: .75}, svg);
+    s('text', {x: m.l + n / max * iw + 5, y: yy + bh / 2 + 4, class: 'lbl num', text: n}, svg);
+    b.addEventListener('mousemove', e => tip.show(e, c, D.backlog.filter(f => f.cat === c).map(f => `${f.id} ${f.name}`)));
+    b.addEventListener('mouseleave', tip.hide);
+  });
+}
+const blState = {q: '', phase: '', cat: ''};
+const maxRice = Math.max(...D.backlog.map(f => f.rice));
+const segEl = $('#bl-phase');
+['', ...PH].forEach(p => {
+  const b = h('button', {type: 'button', 'aria-pressed': p === '' ? 'true' : 'false', text: p || 'Hepsi'});
+  b.addEventListener('click', () => { blState.phase = p; segEl.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); blT.render(); });
+  segEl.append(b);
+});
+[...new Set(D.backlog.map(f => f.cat))].sort((a, b) => a.localeCompare(b, 'tr')).forEach(c => $('#bl-cat').append(h('option', {value: c, text: c})));
+$('#bl-cat').addEventListener('change', e => { blState.cat = e.target.value; blT.render(); });
+$('#bl-search').addEventListener('input', e => { blState.q = e.target.value.toLocaleLowerCase('tr'); blT.render(); });
+const blT = table($('#bl-table'), [
+  {t: 'ID', k: 'id', f: r => h('span', {class: 'mono', text: r.id})},
+  {t: 'Özellik', k: 'name'},
+  {t: 'Kategori', k: 'cat'},
+  {t: 'Faz', k: 'phase', f: r => phaseChip(r.phase)},
+  {t: 'RICE', k: 'rice', r: 1, f: r => h('div', {class: 'ricebar'}, h('i', {style: `width:${Math.round(r.rice / maxRice * 70)}px`}), h('span', {class: 'num', text: nf1.format(r.rice)}))},
+  {t: 'Effort', k: 'E', r: 1, f: r => nf1.format(r.E) + ' kg'},
+  {t: 'Bağımlılık', k: 'deps', f: r => r.deps || '—'}],
+  D.backlog, {sort: true, sortKey: 'rice', dir: -1,
+    filter: r => (!blState.phase || r.phase === blState.phase) && (!blState.cat || r.cat === blState.cat) &&
+      (!blState.q || [r.id, r.name, r.cat, r.problem, r.solution, r.kpi, r.touch, r.accept].join(' ').toLocaleLowerCase('tr').includes(blState.q)),
+    onRow: (r, n) => {
+      const dl = h('dl');
+      [['Problem', r.problem], ['Çözüm', r.solution], ['KPI', r.kpi],
+       ['RICE', `R ${r.R} × I ${r.I} × C %${r.C} ÷ E ${r.E} = ${nf1.format(r.rice)}`],
+       ['Kabul kriterleri', r.accept], ['Kod alanları', r.touch], ['Risk', r.risk]]
+        .forEach(([k, v]) => dl.append(h('dt', {text: k}), h('dd', {text: v || '—'})));
+      return h('tr', {class: 'detail'}, h('td', {colspan: n}, dl));
+    }});
+
+/* ---------- YOL HARİTASI ---------- */
+const later = D.laterEffort;
+const cs = $('#cap-status');
+[['Başlangıç', start], ['Bitiş', end], ['Süre', `${days(start, end) + 1 > 0 ? Math.round((days(start, end) + 1) / 7) : 0} hafta`],
+ ['Planlanan', `${nf1.format(totalEffort)} kişi-gün`], ['Kesilen (Later)', `${nf1.format(later)} kişi-gün`], ['Kapasite', '2,5 kişi-gün/hafta']]
+  .forEach(([k, v]) => cs.append(h('div', {}, h('div', {class: 'k', text: k}), h('div', {class: 'v num', text: v}))));
+function drawGantt() {
+  const {svg, W, H, tip} = svgIn($('#c-gantt'), 60 + P.length * 44);
+  const m = {l: 150, r: 12, t: 26, b: 8}, iw = W - m.l - m.r;
+  const t0 = new Date(start), t1 = new Date(end), span = t1 - t0 + 864e5;
+  const x = d => m.l + (new Date(d) - t0) / span * iw;
+  for (let d = new Date(t0.getFullYear(), t0.getMonth() + 1, 1); d <= t1; d.setMonth(d.getMonth() + 1)) {
+    const iso = d.toISOString().slice(0, 10);
+    s('line', {x1: x(iso), x2: x(iso), y1: m.t - 6, y2: H - m.b, stroke: 'var(--line)'}, svg);
+    s('text', {x: x(iso) + 3, y: m.t - 10, text: d.toLocaleDateString('tr-TR', {month: 'short', year: d.getMonth() === 0 ? '2-digit' : undefined})}, svg);
+  }
+  P.forEach((p, i) => {
+    const yy = m.t + i * 44 + 8;
+    s('text', {x: 0, y: yy + 12, class: 'lbl', text: p.p}, svg);
+    s('text', {x: 28, y: yy + 12, text: p.name.length > 19 ? p.name.slice(0, 18) + '…' : p.name}, svg);
+    const devEnd = new Date(new Date(p.start).getTime() + p.weeks * 7 * 864e5).toISOString().slice(0, 10);
+    const bar = s('rect', {x: x(p.start), y: yy, width: Math.max(3, x(devEnd) - x(p.start) - 2), height: 18, rx: 5, fill: 'var(--accent)'}, svg);
+    if (p.measure) s('rect', {x: x(devEnd), y: yy, width: x(p.end) - x(devEnd) + (iw / span * 864e5), height: 18, rx: 5, fill: 'var(--accent)', opacity: .3}, svg);
+    const lines = [`${p.start} → ${p.end}`, `${nf1.format(p.effort)} kişi-gün · ${p.weeks} hafta geliştirme`, p.measure ? `+${p.measure} hafta ölçüm` : 'Ölçüm penceresi yok',
+      'Özellikler: ' + D.backlog.filter(f => f.phase === p.p).map(f => f.id).join(', ')];
+    bar.addEventListener('mousemove', e => tip.show(e, `${p.p} · ${p.name}`, lines));
+    bar.addEventListener('mouseleave', tip.hide);
+  });
+  const tx = x(D.today);
+  if (tx >= m.l - 40 && tx <= W) {
+    const xx = Math.max(m.l - 2, tx);
+    s('line', {x1: xx, x2: xx, y1: m.t - 6, y2: H - m.b, stroke: 'var(--bad)', 'stroke-width': 2}, svg);
+    s('text', {x: xx + 4, y: H - m.b - 2, text: tx < m.l ? `Bugün (${toStart} gün kaldı)` : 'Bugün', class: 'lbl'}, svg);
+  }
+}
+D.sprints.forEach(sp => {
+  const box = h('div', {class: 'panel'}, h('h2', {text: sp.title}), h('p', {class: 'note', text: `${nDone(sp)}/${sp.tasks.length} görev bitti · ${nf1.format(sp.tasks.reduce((a, t) => a + t.est, 0))} kişi-gün`}));
+  const t = h('table'); box.append(h('div', {class: 'scroll x'}, t)); $('#sprints').append(box);
+  table(t, [{t: '#', k: 'n'}, {t: 'Görev', k: 'task'}, {t: 'Özellik', k: 'feat'}, {t: 'Gün', k: 'est', r: 1, f: r => nf1.format(r.est)}, {t: 'Bitti tanımı', k: 'done'}, {t: 'Durum', k: 'status', f: statusChip}], sp.tasks);
+});
+const mx = $('#matrix');
+mx.append(h('div', {class: 'ax', text: 'Etki ↓ / Olasılık →'}));
+for (let pp = 1; pp <= 5; pp++) mx.append(h('div', {class: 'ax', text: pp}));
+for (let ii = 5; ii >= 1; ii--) {
+  mx.append(h('div', {class: 'ax', text: ii}));
+  for (let pp = 1; pp <= 5; pp++) {
+    const sc = pp * ii, bg = sc >= 12 ? 'var(--bad-bg)' : sc >= 8 ? 'var(--warn-bg)' : 'var(--soft)';
+    const cell = h('div', {class: 'cell', style: `background:${bg}`});
+    D.risks.filter(r => r.p === pp && r.i === ii).forEach(r => cell.append(h('span', {class: 'chip', title: r.risk, text: r.id})));
+    mx.append(cell);
+  }
+}
+table($('#risk-table'), [{t: '#', k: 'id'}, {t: 'Risk', k: 'risk'}, {t: 'Skor', k: 'score', r: 1, f: r => h('span', {class: 'chip ' + (r.score >= 12 ? 'bad' : r.score >= 8 ? 'warn' : ''), text: r.score})}, {t: 'Azaltma', k: 'mitigation'}],
+  D.risks.slice().sort((a, b) => b.score - a.score));
+D.adrs.forEach(a => $('#adrs').append(h('div', {}, h('div', {class: 'q'}, h('span', {class: 'mono', text: a.id + ' '}), a.q), h('div', {text: a.decision}))));
+
+/* ---------- ARAŞTIRMA ---------- */
+D.summary15.forEach(t => $('#summary15').append(h('li', {text: t})));
+table($('#hyp-table'), [{t: '#', k: 'n'}, {t: 'Hipotez', k: 'h'},
+  {t: 'Sonuç', k: 'res', f: r => h('span', {class: 'chip ' + (/Doğru/.test(r.res) ? 'ok' : 'warn'), text: r.res})}, {t: 'Kanıt', k: 'ev'}], D.hypotheses);
+table($('#bench-table'), [{t: 'Metrik', k: 'metric'}, {t: 'Değer', k: 'value'}, {t: 'Kapsam / tarih', k: 'scope'}, {t: 'Kaynak', k: 'src'},
+  {t: 'Güvenilirlik', k: 'rel', f: r => h('span', {class: 'chip ' + (/yüksek/i.test(r.rel) ? 'ok' : /^düşük$/i.test(r.rel) ? 'bad' : 'warn'), text: r.rel})}], D.benchmarks);
+table($('#assume-table'), [{t: '#', k: 'n'}, {t: 'Varsayım', k: 'a'}, {t: 'Kullanıldığı yer', k: 'where'}], D.assumptions);
+table($('#src-table'), [{t: 'No', k: 'no'}, {t: 'Kaynak', k: 'title', f: r => h('a', {href: r.url, target: '_blank', rel: 'noopener', text: r.title})}, {t: 'Not', k: 'rel'}], D.sources);
+
+/* ---------- tabs + responsive charts ---------- */
+const charts = {denge: [drawDur, drawDrain, drawReach], ekonomi: [drawCost, drawProg], backlog: [drawPhase, drawCat], yol: [drawGantt]};
+let active = 'ozet';
+function show(id) {
+  if (!document.getElementById(id)) id = 'ozet';
+  active = id;
+  document.querySelectorAll('section.tab').forEach(sec => sec.classList.toggle('on', sec.id === id));
+  document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === id ? 'true' : 'false'));
+  (charts[id] || []).forEach(f => f());
+}
+document.querySelectorAll('nav.tabs button').forEach(b => b.addEventListener('click', () => { show(b.dataset.tab); history.replaceState(null, '', '#' + b.dataset.tab); }));
+let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => (charts[active] || []).forEach(f => f()), 120); });
+show(location.hash.slice(1) || 'ozet');
+})();
+</script>
