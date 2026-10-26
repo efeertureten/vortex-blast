@@ -65,11 +65,24 @@ const COLORS = [
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const lerp = (a, b, t) => a + (b - a) * t;
 const rand = (a, b) => a + Math.random() * (b - a);
+// Gameplay RNG (block colours): seedable, so a run can be replayed in tests and a Daily Challenge can
+// share one board. Cosmetic randomness (particles, shake, spawn offsets) stays on Math.random.
+let rngState = (Math.random() * 4294967296) >>> 0;
+const seedRng = seed => { rngState = seed >>> 0; };
+function rng() {   // mulberry32
+  rngState = (rngState + 0x6D2B79F5) | 0;
+  let t = Math.imul(rngState ^ (rngState >>> 15), rngState | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+// Test hooks and URL overrides only on ?debug=1 or a local server.
+const DEBUG = /[?&]debug=1(&|$)/.test(location.search) || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
 const wrapA = a => { a = (a + Math.PI) % TAU; if (a < 0) a += TAU; return a - Math.PI; };
 const easeOutBack = t => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
 const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
 const easeInOut = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-const fmt = n => Math.floor(n).toLocaleString('en-US');
+const NUM_FMT = new Intl.NumberFormat('en-US');   // one formatter: toLocaleString() rebuilds it per call
+const fmt = n => NUM_FMT.format(Math.floor(n));
 const inRect = (x, y, R) => x >= R.x && x <= R.x + R.w && y >= R.y && y <= R.y + R.h;
 
 // ---------------------------------------------------------------- canvas
@@ -81,19 +94,37 @@ let dpr = 1, scale = 1, offX = 0, offY = 0, vw = 1, vh = 1;
 let dprCap = 2;                           // lowered automatically on slow devices (see perfWatch)
 
 function resize() {
-  vw = Math.max(1, window.innerWidth); vh = Math.max(1, window.innerHeight);
-  dpr = Math.min(window.devicePixelRatio || 1, dprCap);
+  const nw = Math.max(1, window.innerWidth), nh = Math.max(1, window.innerHeight);
+  const nd = Math.min(window.devicePixelRatio || 1, dprCap);
+  if (nw === vw && nh === vh && nd === dpr && SPR) return;   // mobile browsers fire no-op resizes
+  vw = nw; vh = nh; dpr = nd;
   cvs.width = Math.round(vw * dpr); cvs.height = Math.round(vh * dpr);
   cvs.style.width = vw + 'px'; cvs.style.height = vh + 'px';
   scale = Math.min(vw / W, vh / H);
   offX = (vw - W * scale) / 2; offY = (vh - H * scale) / 2;
   buildBg();
   buildSwirl();
+  buildBlockSprites();
+}
+// Coalesce resize bursts (URL-bar show/hide, rotation) into one rebuild per frame.
+let resizeQueued = false;
+function queueResize() {
+  if (resizeQueued) return;
+  resizeQueued = true;
+  requestAnimationFrame(() => { resizeQueued = false; resize(); });
 }
 
 // ---------------------------------------------------------------- save / meta
-const SAVE_KEY = 'vortexBlast.save.v1';
-const save = { gems: 0, best: 0, upg: { magnet: 0, bomb: 0, mult: 0 }, muted: false };
+// The key keeps its v1 name so existing players' saves are found; the schema version lives in `v`.
+const SAVE_KEY = 'vortexBlast.save.v1', SAVE_VERSION = 2;
+const save = {
+  v: SAVE_VERSION, gems: 0, gemFrac: 0, best: 0, upg: { magnet: 0, bomb: 0, mult: 0 }, muted: false,
+  settings: { sfx: 0.75, music: 0.5, haptics: true, motion: 'full', lang: 'auto' },   // read by the settings screen (F-005)
+  stats: { runs: 0, blasts: 0, bombs: 0, maxCombo: 0, playSec: 0 },
+  daily: { lastClaim: '', day: 0 }, inventory: { bomb: 0, shield: 0, magnet: 0 }, streak: 0,
+  history: [],                                                                         // last 10 runs, newest first
+};
+const GEM_RATE = 0.15;   // scales every gem source; see docs/01_GDD.md §6.3 (F-044)
 const multOf = l => 1 + 0.25 * l;
 const UPGRADES = [
   { key:'magnet', name:'Alignment Magnet', max:5,
@@ -112,16 +143,50 @@ const UPGRADES = [
     eff: l => `x${multOf(l).toFixed(2)}` + (l < 10 ? `  →  x${multOf(l + 1).toFixed(2)}` : '  (max)'),
     col: ['#ffe066', '#d08400'] },
 ];
+// Each step upgrades a parsed save by one version; sections a step doesn't touch take their defaults.
+const MIGRATIONS = {
+  1: d => Object.assign(d, { v: 2 }),   // v1 → v2: adds settings/stats/daily/inventory/streak/history/gemFrac
+};
+function migrate(d) {
+  let v = Number.isFinite(d.v) ? d.v : 1;
+  while (v < SAVE_VERSION && MIGRATIONS[v]) { d = MIGRATIONS[v](d); v = d.v; }
+  return d;
+}
+const intIn = (x, lo, hi, dflt) => Number.isFinite(x) ? clamp(Math.floor(x), lo, hi) : dflt;
+function applySave(d) {
+  save.gems = intIn(d.gems, 0, 1e9, 0);
+  save.gemFrac = Number.isFinite(d.gemFrac) ? clamp(d.gemFrac, 0, 0.999) : 0;
+  save.best = intIn(d.best, 0, 1e12, 0);
+  if (d.upg) for (const U of UPGRADES) save.upg[U.key] = intIn(d.upg[U.key], 0, U.max, 0);
+  save.muted = !!d.muted;
+  const S = save.settings, ds = d.settings || {};
+  if (Number.isFinite(ds.sfx)) S.sfx = clamp(ds.sfx, 0, 1);
+  if (Number.isFinite(ds.music)) S.music = clamp(ds.music, 0, 1);
+  if (typeof ds.haptics === 'boolean') S.haptics = ds.haptics;
+  if (ds.motion === 'full' || ds.motion === 'reduced') S.motion = ds.motion;
+  if (typeof ds.lang === 'string' && ds.lang.length <= 8) S.lang = ds.lang;
+  const st = d.stats || {};
+  for (const k in save.stats) save.stats[k] = Number.isFinite(st[k]) ? Math.max(0, st[k]) : 0;
+  const dl = d.daily || {};
+  save.daily = { lastClaim: typeof dl.lastClaim === 'string' ? dl.lastClaim.slice(0, 10) : '', day: intIn(dl.day, 0, 7, 0) };
+  for (const k in save.inventory) save.inventory[k] = intIn((d.inventory || {})[k], 0, 99, 0);
+  save.streak = intIn(d.streak, 0, 9999, 0);
+  save.history = Array.isArray(d.history) ? d.history.filter(h => h && typeof h === 'object').slice(0, 10) : [];
+  // keep fields from a newer build untouched, and never write a lower version over them
+  for (const k in d) if (!(k in save)) save[k] = d[k];
+  save.v = Math.max(SAVE_VERSION, Number.isFinite(d.v) ? d.v : 0);
+}
 (function load() {
-  try {
-    const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
-    if (d && typeof d === 'object') {
-      if (Number.isFinite(d.gems)) save.gems = Math.max(0, Math.floor(d.gems));
-      if (Number.isFinite(d.best)) save.best = Math.max(0, Math.floor(d.best));
-      if (d.upg) for (const U of UPGRADES) if (Number.isFinite(d.upg[U.key])) save.upg[U.key] = clamp(Math.floor(d.upg[U.key]), 0, U.max);
-      save.muted = !!d.muted;
-    }
-  } catch (e) { /* storage unavailable: play without persistence */ }
+  let raw = null;
+  try { raw = localStorage.getItem(SAVE_KEY); } catch (e) { return; }   // storage unavailable: play without persistence
+  if (!raw) return;
+  let d = null;
+  try { d = JSON.parse(raw); } catch (e) { /* corrupt: handled below */ }
+  if (!d || typeof d !== 'object' || Array.isArray(d)) {
+    try { localStorage.setItem(SAVE_KEY + '.bak', raw); } catch (e) {}   // keep the bytes for recovery, start fresh
+    return;
+  }
+  applySave(migrate(d));
 })();
 let saveDirty = false, saveTimer = 0;
 function persist() { saveDirty = false; try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
@@ -130,6 +195,9 @@ const bombThreshold = () => 6 - save.upg.bomb;
 const multV = () => multOf(save.upg.mult);
 const tolerance = () => 0.19 + 0.024 * save.upg.magnet;   // radial alignment window (radians)
 const anyAffordable = () => UPGRADES.some(U => save.upg[U.key] < U.max && save.gems >= U.cost(save.upg[U.key]));
+const shownGems = () => Math.max(0, save.gems - gemsInFlight);   // a purchase mid-flight must not show negative
+// Haptics (Android/Chrome; silently absent on iOS). Needs a prior user gesture, which every caller has.
+function buzz(p) { try { if (save.settings.haptics && navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
 
 // ---------------------------------------------------------------- audio
 const Snd = (() => {
@@ -150,7 +218,8 @@ const Snd = (() => {
         const d = noiseBuf.getChannelData(0);
         for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
       }
-      if (ac.state === 'suspended') ac.resume();
+      // iOS reports 'interrupted' (not 'suspended') after a call or app switch
+      if (ac.state !== 'running' && ac.state !== 'closed') ac.resume().catch(() => {});
     } catch (e) {}
   }
   const ok = () => ac && ac.state === 'running' && !save.muted;
@@ -344,6 +413,49 @@ function makeIcon(C) {
 }
 const ICONS = COLORS.map(makeIcon);
 
+// ---------------------------------------------------------------- block sprite cache
+// A block at rest is the same picture rotated around the core, so each (ring, colour) body and the
+// per-ring dim / outline / halo masks are rasterised once per resize at device resolution and blitted
+// with one drawImage. Moving, squashing, flashing and bomb blocks keep the full vector path.
+let SPR = null;
+function paintBody(g, C, gm, path) {
+  const grd = g.createRadialGradient(0, 0, gm.r0, 0, 0, gm.r1);
+  grd.addColorStop(0, C.dark); grd.addColorStop(0.5, C.base); grd.addColorStop(1, C.light);
+  g.fillStyle = grd; g.fill(path);
+  g.lineJoin = 'round'; g.lineWidth = 2.6; g.strokeStyle = C.deep; g.stroke(path);
+  // glossy jelly band + specular
+  g.fillStyle = 'rgba(255,255,255,0.36)';
+  g.fill(sector(gm.r1 - gm.th * 0.42, gm.r1 - gm.th * 0.11, gm.ac - gm.hw * 0.8, gm.ac + gm.hw * 0.8, 5));
+  const sa = gm.ac - gm.hw * 0.68, sr = gm.r1 - gm.th * 0.27;
+  g.fillStyle = 'rgba(255,255,255,0.9)'; g.beginPath(); g.arc(Math.cos(sa) * sr, Math.sin(sa) * sr, 2.6, 0, TAU); g.fill();
+}
+function buildBlockSprites() {
+  const pr = Math.min(4, scale * dpr), PAD = 9;
+  SPR = [];
+  for (let r = 0; r < RINGS; r++) {
+    const mid = ringMid(r), hw = DA / 2 - 2.6 / mid;
+    const gm = { mid, th: RING_T, ac: 0, hw, r0: mid - RING_T / 2, r1: mid + RING_T / 2 };
+    const x0 = gm.r0 * Math.cos(hw) - PAD, hh = gm.r1 * Math.sin(hw) + PAD;
+    const pw = Math.ceil((gm.r1 + PAD - x0) * pr), ph = Math.ceil(2 * hh * pr);
+    const mk = paint => {
+      const c = document.createElement('canvas'); c.width = pw; c.height = ph;
+      const g = c.getContext('2d');
+      g.setTransform(pr, 0, 0, pr, -x0 * pr, hh * pr);   // vortex-centre coords → sprite pixels
+      g.lineJoin = 'round';
+      paint(g, sector(gm.r0, gm.r1, -hw, hw, 10));
+      return c;
+    };
+    SPR.push({
+      fr: { x: x0 - mid, y: -hh, w: pw / pr, h: ph / pr },   // sprite rect relative to the block centre
+      icon: Math.min(31, hw * 2 * mid * 0.74, RING_T * 0.78),
+      body: COLORS.map(C => mk((g, p) => paintBody(g, C, gm, p))),
+      dim:  mk((g, p) => { g.fillStyle = 'rgb(14,4,40)'; g.fill(p); }),
+      edge: mk((g, p) => { g.strokeStyle = '#fff'; g.lineWidth = 4; g.stroke(p); }),
+      halo: mk((g, p) => { g.strokeStyle = '#fff'; g.lineWidth = 12; g.stroke(p); }),
+    });
+  }
+}
+
 // ---------------------------------------------------------------- background
 // Static backdrop (drawn once per resize into its own canvas layer).
 function buildBg() {
@@ -355,10 +467,13 @@ function buildBg() {
   const grd = g.createRadialGradient(cx, cy, 0, cx, cy, R);
   grd.addColorStop(0, '#41208a'); grd.addColorStop(0.3, '#24105a'); grd.addColorStop(0.7, '#130833'); grd.addColorStop(1, '#08030f');
   g.fillStyle = grd; g.fillRect(0, 0, bgEl.width, bgEl.height);
+  // seeded (mulberry32) so the starfield doesn't jump around on every resize
+  let seed = 0x5eed;
+  const rnd = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), seed | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   for (let i = 0; i < 140; i++) {
-    g.fillStyle = `rgba(${Math.random() < 0.3 ? '180,220,255' : '255,255,255'},${Math.random() * 0.4 + 0.05})`;
-    const s = (Math.random() * 1.6 + 0.5) * dpr;
-    g.fillRect(Math.random() * bgEl.width, Math.random() * bgEl.height, s, s);
+    g.fillStyle = `rgba(${rnd() < 0.3 ? '180,220,255' : '255,255,255'},${rnd() * 0.4 + 0.05})`;
+    const s = (rnd() * 1.6 + 0.5) * dpr;
+    g.fillRect(rnd() * bgEl.width, rnd() * bgEl.height, s, s);
   }
 }
 // Spiral-arm layer centred on the vortex; rotated by CSS so it costs nothing per frame.
@@ -391,7 +506,7 @@ for (let i = 0; i < 60; i++) dust.push(newDust(true));
 let state = 'title';                 // title | play | dying | over
 let autoPaused = false;
 let score = 0, dispScore = 0, stability = 100, dispStab = 100, wave = 1;
-let combo = 0, comboT = 0, maxCombo = 0, runGems = 0, blasts = 0, bombsMade = 0, timeAlive = 0;
+let combo = 0, comboT = 0, maxCombo = 0, runGems = 0, blasts = 0, bombsMade = 0, timeAlive = 0, runSeed = 0;
 let hitStop = 0, pending = null, shake = 0, flashA = 0, flashCol = '255,255,255';
 let corePulse = 0, boardPunch = 0, dyingT = 0, overT = 0, newBest = false, lowT = 0;
 let comboPop = 0, gemBounce = 0, barFlash = 0, bombOnBoard = false;
@@ -430,17 +545,17 @@ function blockWorld(r, s, b) {
 
 function fillBoardFresh(fromOutside) {
   for (let r = 0; r < RINGS; r++) for (let s = 0; s < SLOTS; s++) {
-    const b = newBlock((Math.random() * 4) | 0);
+    const b = newBlock((rng() * 4) | 0);
     if (fromOutside) { b.dr = 300 - ringMid(r) + r * 30 + rand(0, 50); b.vr = -80; b.sc = 0.35; b.da = rand(-0.25, 0.25); }
     grid[r][s] = b;
   }
 }
 function spawnColor(s) {
-  if (Math.random() < 0.22) {
+  if (rng() < 0.22) {
     const nb = grid[RINGS - 1][(s + SLOTS - 1) % SLOTS] || grid[RINGS - 1][(s + 1) % SLOTS];
     if (nb && !nb.bomb) return nb.c;
   }
-  return (Math.random() * 4) | 0;
+  return (rng() * 4) | 0;
 }
 // Move a block between slots, keeping its current on-screen position (spring takes it home).
 function moveBlock(fr, fs, tr, ts) {
@@ -548,7 +663,12 @@ function orb(x, y, rgb) {
 }
 function addGems(g, x, y) {
   if (g <= 0) return;
-  save.gems += g; runGems += g; markDirty();
+  // GEM_RATE scales every source; the fraction carries over to the next award (and across runs via the save)
+  save.gemFrac += g * GEM_RATE;
+  g = Math.floor(save.gemFrac + 1e-9); save.gemFrac -= g;
+  markDirty();
+  if (g <= 0) return;
+  save.gems += g; runGems += g;
   const n = Math.min(g, 5); let rem = g;
   for (let i = 0; i < n; i++) {
     const val = i === n - 1 ? rem : Math.floor(g / n); rem -= val;
@@ -595,7 +715,11 @@ function startGame() {
   score = 0; dispScore = 0; stability = 100; dispStab = 100; wave = 1;
   combo = 0; comboT = 0; maxCombo = 0; runGems = 0; blasts = 0; bombsMade = 0; timeAlive = 0;
   newBest = false; lowT = 0; hitStop = 0; pending = null;
-  banners.length = 0;
+  banners.length = 0; drawerOpen = false;
+  // Seeds every colour spawned from here on (the board on screen is kept). ?seed=N replays one in debug.
+  const fixed = DEBUG && /[?&]seed=(\d+)/.exec(location.search);
+  runSeed = fixed ? Number(fixed[1]) >>> 0 : (Math.random() * 4294967296) >>> 0;
+  seedRng(runSeed);
   banner('GO!', 92, '#7dffa0', 0.9, 330);
   Snd.start();
 }
@@ -660,6 +784,7 @@ function doBlast(cells, tap) {
   else if (n >= 8) banner('AWESOME!', 60, '#7df9ff');
   else if (n >= 5) banner(n >= 6 ? 'GREAT!' : 'NICE!', 52, '#9dff8a', 1.0);
   shake = Math.max(shake, Math.min(15, 3 + n * 1.1));
+  buzz(Math.min(40, 8 + n * 3));
   Snd.blast(n, combo);
   settle();
 }
@@ -684,6 +809,7 @@ function doBomb(r) {
   addGems(Math.round(4 * m), CX, CY - rm);
   banner('RING CLEAR!', 64, '#e4c2ff', 1.3, 300);
   shake = 24; flashA = 0.55; flashCol = '225,190,255';
+  buzz([35, 40, 70]);
   Snd.bomb();
   settle();
 }
@@ -707,7 +833,13 @@ function gameOver() {
   addPart({ k: 'ring', x: CX, y: CY, r: 30, gr: 900, w: 30, col: '255,90,70', life: 0.8, t: 0 });
   shake = 30; flashA = 0.85; flashCol = '255,120,90';
   newBest = score > save.best; if (newBest) save.best = score;
+  const st = save.stats;
+  st.runs++; st.blasts += blasts; st.bombs += bombsMade; st.maxCombo = Math.max(st.maxCombo, maxCombo);
+  st.playSec = Math.round(st.playSec + timeAlive);
+  save.history.unshift({ at: new Date().toISOString().slice(0, 16), score, wave, sec: Math.round(timeAlive), gems: runGems, seed: runSeed });
+  save.history.length = Math.min(save.history.length, 10);
   persist();
+  buzz([60, 50, 140]);
   Snd.over();
 }
 
@@ -778,9 +910,19 @@ function simulate(dt) {
 const stabHue = p => p > 0.5 ? lerp(42, 188, (p - 0.5) / 0.5) : lerp(0, 42, p / 0.5);
 function fullRect() { ctx.fillRect(-offX / scale - 4, -offY / scale - 4, vw / scale + 8, vh / scale + 8); }
 
+const breatheOf = (r, b) => b.glow > 0.01 ? 1 + 0.035 * b.glow * (0.5 + 0.5 * Math.sin(T * 9 + r * 1.3)) : 1;
+// Undeformed and steady → can be drawn from the sprite cache (sub-pixel thresholds, so the switch is invisible).
+const atRest = b => SPR && !b.bomb && b.flash === 0 && b.wob === 0 && b.jel < 0.01 &&
+  Math.abs(b.dr) < 0.3 && Math.abs(b.vr) < 5 && Math.abs(b.da) < 0.002 && Math.abs(b.sc - 1) < 0.004;
+// Enter a block-local frame (origin = block centre, +x = outward) for sprite blits; caller restores.
+function spriteFrame(r, s, b) {
+  const k = breatheOf(r, b), ac = slotAng(r, s) + b.da;
+  ctx.save(); ctx.rotate(ac); ctx.translate(ringMid(r) + b.dr, 0); ctx.scale(k, k);
+  return ac;
+}
+
 function geom(r, s, b) {
-  const breathe = b.glow > 0.01 ? 1 + 0.035 * b.glow * (0.5 + 0.5 * Math.sin(T * 9 + r * 1.3)) : 1;
-  const k = Math.max(0.05, b.sc) * breathe * (hitStop > 0 && b.flash > 0 ? 1.12 : 1);
+  const k = Math.max(0.05, b.sc) * breatheOf(r, b) * (hitStop > 0 && b.flash > 0 ? 1.12 : 1);
   const mid = ringMid(r) + b.dr;
   const jel = b.jel * Math.sin(b.jelP);
   const stretch = clamp(Math.abs(b.vr) / 1800, 0, 0.22);
@@ -825,6 +967,14 @@ function drawBoard() {
   // pass 1: "ready to blast" halos under everything
   for (let r = 0; r < RINGS; r++) for (let s = 0; s < SLOTS; s++) {
     const b = grid[r][s]; if (!b || b.glow < 0.02 || b.bomb) continue;
+    if (atRest(b)) {
+      const F = SPR[r].fr;
+      spriteFrame(r, s, b);
+      ctx.globalAlpha = 0.42 * b.glow * (0.55 + 0.45 * pulse);
+      ctx.drawImage(SPR[r].halo, F.x, F.y, F.w, F.h);
+      ctx.restore();
+      continue;
+    }
     const g = geom(r, s, b); if (g.r0 < 8) continue;
     const path = sector(g.r0, g.r1, g.ac - g.hw, g.ac + g.hw, 10);
     ctx.lineJoin = 'round';
@@ -849,7 +999,20 @@ function drawBoard() {
   ctx.restore();
 }
 
+function drawBlockSprite(r, s, b, pulse) {
+  const S = SPR[r], F = S.fr;
+  const ac = spriteFrame(r, s, b);
+  ctx.drawImage(S.body[b.c], F.x, F.y, F.w, F.h);
+  ctx.rotate(-ac);                                  // icons stay upright while the ring turns
+  ctx.drawImage(ICONS[b.c], -S.icon / 2, -S.icon / 2, S.icon, S.icon);
+  ctx.rotate(ac);
+  if (state === 'play' && b.glow < 0.98) { ctx.globalAlpha = 0.2 * (1 - b.glow); ctx.drawImage(S.dim, F.x, F.y, F.w, F.h); }
+  if (b.glow > 0.02) { ctx.globalAlpha = (0.75 + 0.25 * pulse) * b.glow; ctx.drawImage(S.edge, F.x, F.y, F.w, F.h); }
+  ctx.restore();
+}
+
 function drawBlock(r, s, b, pulse) {
+  if (atRest(b)) { drawBlockSprite(r, s, b, pulse); return; }
   const g = geom(r, s, b); if (g.r0 < 8) return;
   ctx.globalAlpha = clamp(1 - (b.dr - 40) / 100, 0, 1);
   const a0 = g.ac - g.hw, a1 = g.ac + g.hw;
@@ -871,16 +1034,7 @@ function drawBlock(r, s, b, pulse) {
     ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.fill(sector(g.r1 - g.th * 0.4, g.r1 - g.th * 0.1, g.ac - g.hw * 0.8, g.ac + g.hw * 0.8, 5));
     drawSwirl(ix, iy, 15 * Math.max(0.2, b.sc), T * 5);
   } else {
-    const C = COLORS[b.c];
-    const grd = ctx.createRadialGradient(0, 0, g.r0, 0, 0, g.r1);
-    grd.addColorStop(0, C.dark); grd.addColorStop(0.5, C.base); grd.addColorStop(1, C.light);
-    ctx.fillStyle = grd; ctx.fill(path);
-    ctx.lineWidth = 2.6; ctx.strokeStyle = C.deep; ctx.stroke(path);
-    // glossy jelly band + specular
-    ctx.fillStyle = 'rgba(255,255,255,0.36)';
-    ctx.fill(sector(g.r1 - g.th * 0.42, g.r1 - g.th * 0.11, g.ac - g.hw * 0.8, g.ac + g.hw * 0.8, 5));
-    const sa = a0 + g.hw * 0.32, sr = g.r1 - g.th * 0.27;
-    ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(Math.cos(sa) * sr, Math.sin(sa) * sr, 2.6, 0, TAU); ctx.fill();
+    paintBody(ctx, COLORS[b.c], g, path);
     const is = Math.min(31, g.hw * 2 * g.mid * 0.74, g.th * 0.78);
     ctx.drawImage(ICONS[b.c], ix - is / 2, iy - is / 2, is, is);
     // blocks that can't blast yet sit back slightly so "ready" groups read instantly
@@ -920,9 +1074,18 @@ function drawCore(p, hue) {
   ctx.restore();
 }
 
+// Two passes: normal blend first, then every additive ('lighter') particle, so the composite
+// mode flips twice per frame instead of twice per ring/orb particle.
 function drawParticles() {
+  drawParticlePass(false);
+  ctx.globalCompositeOperation = 'lighter';
+  drawParticlePass(true);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+}
+function drawParticlePass(additive) {
   for (const p of parts) {
-    if (p.t < 0) continue;
+    if (p.t < 0 || (p.k === 'ring' || p.k === 'orb') !== additive) continue;
     const k = clamp(p.t / p.life, 0, 1), a = 1 - k;
     switch (p.k) {
       case 'dot':
@@ -938,12 +1101,10 @@ function drawParticles() {
         ctx.restore(); break;
       case 'ring':
         if (p.r <= 0) break;
-        ctx.globalCompositeOperation = 'lighter';
         ctx.globalAlpha = a; ctx.strokeStyle = `rgb(${p.col})`; ctx.lineWidth = Math.max(0.5, p.w * (1 - k));
         ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU); ctx.stroke();
-        ctx.globalCompositeOperation = 'source-over'; break;
+        break;
       case 'orb': {
-        ctx.globalCompositeOperation = 'lighter';
         for (let j = 0; j < 3; j++) {
           const u = Math.max(0, k - j * 0.06), uu = u * u;
           const x = (1 - uu) * (1 - uu) * p.sx + 2 * (1 - uu) * uu * p.cx + uu * uu * CX;
@@ -952,7 +1113,7 @@ function drawParticles() {
           ctx.fillStyle = `rgba(${p.col},0.45)`; ctx.beginPath(); ctx.arc(x, y, 8 - j * 2, 0, TAU); ctx.fill();
           ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, 3.2 - j * 0.8, 0, TAU); ctx.fill();
         }
-        ctx.globalCompositeOperation = 'source-over'; break;
+        break;
       }
       case 'gem': {
         const u = easeInOut(k);
@@ -969,7 +1130,6 @@ function drawParticles() {
       }
     }
   }
-  ctx.globalAlpha = 1;
 }
 
 function drawGemPill() {
@@ -978,7 +1138,7 @@ function drawGemPill() {
   rr(-P.w / 2, -P.h / 2, P.w, P.h, P.h / 2); ctx.fillStyle = 'rgba(10,4,32,0.65)'; ctx.fill();
   ctx.strokeStyle = 'rgba(140,220,255,0.4)'; ctx.lineWidth = 2; ctx.stroke();
   drawGem(-P.w / 2 + 24, 1, 12);
-  txt(fmt(save.gems - gemsInFlight), 14, 2, { size: 23, color: '#fff' });
+  txt(fmt(shownGems()), 14, 2, { size: 23, color: '#fff' });
   ctx.restore();
 }
 function drawMute() {
@@ -1163,7 +1323,7 @@ function drawDrawer() {
     txt('!', 0, 1, { size: 16, color: '#fff' }); ctx.restore();
   }
   drawGem(392, py + 37, 11);
-  txt(fmt(save.gems - gemsInFlight), 410, py + 39, { size: 22, color: '#9ff8ff', align: 'left' });
+  txt(fmt(shownGems()), 410, py + 39, { size: 22, color: '#9ff8ff', align: 'left' });
   // chevron
   ctx.save(); ctx.translate(500, py + 36); ctx.rotate(drawerT * Math.PI);
   ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
@@ -1229,6 +1389,10 @@ function buy(i) {
   }
 }
 
+// Built once in logical space; its strength is applied with globalAlpha (alpha scales linearly, so identical).
+const VIGNETTE = ctx.createRadialGradient(270, 480, 260, 270, 480, 700);
+VIGNETTE.addColorStop(0, 'rgba(255,0,40,0)'); VIGNETTE.addColorStop(1, 'rgb(255,20,50)');
+
 function render() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, cvs.width, cvs.height);
@@ -1239,10 +1403,8 @@ function render() {
 
   // low-stability danger vignette
   if (state === 'play' && dispStab < 30) {
-    const a = (1 - dispStab / 30) * (0.35 + 0.25 * Math.sin(T * 10));
-    const vg = ctx.createRadialGradient(270, 480, 260, 270, 480, 700);
-    vg.addColorStop(0, 'rgba(255,0,40,0)'); vg.addColorStop(1, `rgba(255,20,50,${a})`);
-    ctx.fillStyle = vg; fullRect();
+    ctx.globalAlpha = clamp((1 - dispStab / 30) * (0.35 + 0.25 * Math.sin(T * 10)), 0, 1);
+    ctx.fillStyle = VIGNETTE; fullRect(); ctx.globalAlpha = 1;
   }
 
   if (state === 'title') { drawTitle(); drawGemPill(); drawMute(); }
@@ -1289,9 +1451,13 @@ cvs.addEventListener('pointerdown', e => {
 }, { passive: false });
 cvs.addEventListener('contextmenu', e => e.preventDefault());
 window.addEventListener('keydown', e => {
+  if (e.repeat) return;                       // holding Space must not chain-restart
   if (e.code === 'Space' || e.code === 'Enter') {
+    e.preventDefault();
     if (state === 'title' || (state === 'over' && overT > 0.5)) { Snd.init(); startGame(); }
-  } else if (e.code === 'KeyU') toggleDrawer(!drawerOpen);
+    else if (autoPaused) { autoPaused = false; Snd.click(); }
+  } else if (e.code === 'KeyU') { if (state !== 'dying') toggleDrawer(!drawerOpen); }
+  else if (e.code === 'Escape') { if (drawerOpen) toggleDrawer(false); }
   else if (e.code === 'KeyM') { save.muted = !save.muted; Snd.init(); Snd.setMuted(save.muted); persist(); }
 });
 document.addEventListener('visibilitychange', () => {
@@ -1313,8 +1479,8 @@ function perfWatch(dt) {
   else { quality = 0; swEl.style.display = 'none'; }
 }
 window.addEventListener('pagehide', persist);
-window.addEventListener('resize', resize);
-window.addEventListener('orientationchange', () => setTimeout(resize, 120));
+window.addEventListener('resize', queueResize);
+window.addEventListener('orientationchange', () => setTimeout(queueResize, 120));
 
 // ---------------------------------------------------------------- boot
 resize();
@@ -1330,13 +1496,14 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 
-// tiny read-only hook for automated testing
-window.__vortex = {
+// Hook for automated testing (docs/tools/smoke.py). Absent in production builds/URLs, so the console
+// can't be used to edit stability or replay seeds.
+if (DEBUG) window.__vortex = {
   get state() { return state; }, get stability() { return stability; }, get score() { return score; },
-  get quality() { return quality; }, get wave() { return wave; },
-  get clusters() { return clusters; }, grid, ringAng, CX, CY, ringMid, slotAng, blockWorld,
+  get quality() { return quality; }, get wave() { return wave; }, get runSeed() { return runSeed; },
+  get clusters() { return clusters; }, get save() { return save; }, grid, ringAng, CX, CY, ringMid, slotAng, blockWorld,
   toScreen: (x, y) => ({ x: x * scale + offX, y: y * scale + offY }),
-  setStability: v => { stability = v; },
+  setStability: v => { stability = v; }, seedRng, rng, fillBoardFresh,
 };
 })();
 </script>
