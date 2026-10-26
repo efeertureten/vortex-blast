@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>icon</title>
+<style>html,body{margin:0;background:transparent;overflow:hidden}canvas{display:block}</style></head>
+<body><canvas id="c"></canvas>
+<script>
+// Renders the app icon for tools/make_icons.py: ?size=512&mask=1 (mask = full-bleed square with the
+// artwork inside the 80 % maskable safe zone).
+const q = new URLSearchParams(location.search), S = +(q.get('size') || 512), mask = q.get('mask') === '1';
+const c = document.getElementById('c'); c.width = c.height = S;
+const g = c.getContext('2d'), TAU = Math.PI * 2, k = S / 512;
+g.scale(k, k);
+const bg = g.createRadialGradient(256, 256, 0, 256, 256, 360);
+bg.addColorStop(0, '#41208a'); bg.addColorStop(0.55, '#1c0b4a'); bg.addColorStop(1, '#08030f');
+g.fillStyle = bg;
+if (mask) g.fillRect(0, 0, 512, 512);
+else { g.beginPath(); g.roundRect ? g.roundRect(0, 0, 512, 512, 112) : g.rect(0, 0, 512, 512); g.fill(); }
+const z = mask ? 0.78 : 1;                     // keep the art inside the maskable safe zone
+g.translate(256, 256); g.scale(z, z);
+const COL = [['#ff3b55', '#b5122f'], ['#2e8bff', '#1446b4'], ['#ffc928', '#d07a00'], ['#2fd457', '#0e8a32']];
+const rings = [[72, 40, 8, 0.3], [126, 44, 10, 1.1], [182, 44, 12, 0.5]];
+rings.forEach(([r0, th, n, off], ri) => {
+  for (let i = 0; i < n; i++) {
+    const a0 = off + i * TAU / n + 0.06, a1 = off + (i + 1) * TAU / n - 0.06, col = COL[(i + ri) % 4];
+    g.beginPath(); g.arc(0, 0, r0 + th, a0, a1); g.arc(0, 0, r0, a1, a0, true); g.closePath();
+    const gr = g.createRadialGradient(0, 0, r0, 0, 0, r0 + th); gr.addColorStop(0, col[1]); gr.addColorStop(1, col[0]);
+    g.fillStyle = gr; g.fill(); g.lineWidth = 4; g.strokeStyle = 'rgba(20,6,40,0.6)'; g.stroke();
+  }
+});
+const core = g.createRadialGradient(-18, -20, 4, 0, 0, 60);
+core.addColorStop(0, '#ffffff'); core.addColorStop(0.3, '#9ff8ff'); core.addColorStop(1, '#1d8fd6');
+g.fillStyle = core; g.beginPath(); g.arc(0, 0, 58, 0, TAU); g.fill();
+g.lineCap = 'round'; g.strokeStyle = 'rgba(255,255,255,0.75)'; g.lineWidth = 9;
+for (let i = 0; i < 3; i++) { g.rotate(TAU / 3); g.beginPath(); g.arc(10, 0, 26, Math.PI * 0.95, Math.PI * 1.85); g.stroke(); }
+document.title = 'ready';
+</script></body></html>

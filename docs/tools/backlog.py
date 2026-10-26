@@ -289,18 +289,28 @@ PHASE = {
     'Later': ['F-008', 'F-016', 'F-017', 'F-020', 'F-023', 'F-026', 'F-028', 'F-029', 'F-039', 'F-040'],
 }
 PHASE_OF = {fid: p for p, ids in PHASE.items() for fid in ids}
+
+# Implementation status in index.html (2026-10-26, branch dev/roadmap). 'Kısmi' says what is missing.
+DONE = 'Uygulandı'
+STATUS = {fid: DONE for fid in PHASE_OF}
+STATUS.update({
+    'F-031': 'Kısmi: Capacitor iskeleti + AdMob/UMP kodu hazır; derleme/test yapılmadı (Node/Android Studio yok) — docs/STORE.md',
+    'F-012': 'Kısmi: no-ads yetkisi ve interstitial atlama hazır; mağaza satın alma eklentisi yok',
+    'F-040': 'Kısmi: ücretsiz 30 kademe çalışıyor; premium şerit IAP gelene kadar kilitli',
+    'F-034': 'Uygulandı (değiştirilmiş): src/ bölüm dosyaları + tools/build.py → tek index.html (ES modules yerine; ADR-2)',
+})
 assert sorted(PHASE_OF) == sorted(f[0] for f in F), 'every feature needs exactly one phase'
 F = [f[:-1] + (PHASE_OF[f[0]],) for f in F]
 
 FIELDS = ['ID', 'Ad', 'Kategori', 'Problem/gerekçe', 'Çözüm özeti', 'Etkilediği KPI', 'Reach', 'Impact',
           'Confidence', 'Effort (kişi-gün)', 'RICE', 'Bağımlılıklar', 'Risk', 'Kabul kriterleri',
-          'Dokunulacak fonksiyonlar/alanlar', 'Faz']
+          'Dokunulacak fonksiyonlar/alanlar', 'Faz', 'Durum']
 
 rows = []
 for f in F:
     (fid, ad, kat, prob, coz, kpi, R, I, C, E, dep, risk, kabul, dok, faz) = f
     rice = round(R * I * C / E, 2)
-    rows.append(dict(zip(FIELDS, [fid, ad, kat, prob, coz, kpi, R, I, f'{int(C * 100)}%', E, rice, dep, risk, kabul, dok, faz])))
+    rows.append(dict(zip(FIELDS, [fid, ad, kat, prob, coz, kpi, R, I, f'{int(C * 100)}%', E, rice, dep, risk, kabul, dok, faz, STATUS[fid]])))
 
 with open(os.path.join(HERE, '..', 'feature_backlog.csv'), 'w', newline='', encoding='utf-8-sig') as fh:
     w = csv.DictWriter(fh, fieldnames=FIELDS)
@@ -330,6 +340,9 @@ lines.append(f"| **Toplam** | **{len(rows)}** | **{sum(phase.values()):g}** |")
 qw = [r for r in rank if r['Effort (kişi-gün)'] <= 2 and r['RICE'] >= 4]
 lines += ['', '**Quick wins** (effort ≤ 2 kişi-gün ve RICE ≥ 4):', '', '| ID | Ad | RICE | Effort | Faz |', '|---|---|---:|---:|---|']
 lines += [f"| {r['ID']} | {r['Ad']} | {r['RICE']} | {r['Effort (kişi-gün)']} | {r['Faz']} |" for r in qw]
+n_done = sum(1 for r in rows if r['Durum'].startswith('Uygulandı'))
+lines += ['', f"**Uygulama durumu:** {n_done}/{len(rows)} uygulandı, "
+          f"{sum(1 for r in rows if r['Durum'].startswith('Kısmi'))} kısmi."]
 cats = sorted({r['Kategori'] for r in rows})
 lines += ['', f'Kategori sayısı: {len(cats)} — ' + ', '.join(cats)]
 with open(os.path.join(OUT, 'backlog_stats.md'), 'w', encoding='utf-8') as fh:

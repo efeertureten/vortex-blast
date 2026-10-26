@@ -1,0 +1,6 @@
+{
+  "_comment": "Remote tuning for Vortex Blast (F-036). Any key of CFG_DEFAULT in index.html can be overridden here; the game falls back to its built-in defaults when this file is missing or invalid. Example experiment (disabled): add {\"combo_window\": {\"variants\": {\"A\": {}, \"B\": {\"combo\": {\"window\": 1.6}}}, \"weights\": {\"A\": 50, \"B\": 50}}} under experiments.",
+  "ads": { "provider": "none", "h5Client": "" },
+  "analytics": { "endpoint": "" },
+  "experiments": {}
+}

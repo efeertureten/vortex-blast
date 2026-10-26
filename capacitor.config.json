@@ -1,0 +1,8 @@
+{
+  "appId": "com.efeertureten.vortexblast",
+  "appName": "Vortex Blast",
+  "webDir": "www",
+  "backgroundColor": "#0b0419",
+  "android": { "allowMixedContent": false },
+  "ios": { "contentInset": "never" }
+}
