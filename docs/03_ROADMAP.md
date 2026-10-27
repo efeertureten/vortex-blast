@@ -7,7 +7,7 @@
 >
 > Takvim artık **ölçüm** için geçerli, geliştirme için değil:
 > - G1 (web kohortu) ve G2 (Android soft-launch) kapıları gerçek oyuncu verisi ister.
-> - Mağaza derlemesi (F-031) bu makinede yapılamıyor (Node.js, Android Studio yok). Önce **web yayını** (GitHub Pages, PWA) ile G1 web kohortu ölçülecek; Pages `main` kökünden yayınlıyor (merge = yayın), gizlilik iletişim bilgisi ve analitik uç noktası bekliyor (`STORE.md`).
+> - Mağaza derlemesi (F-031) bu makinede yapılamıyor (Node.js, Android Studio yok). Önce **web yayını** (GitHub Pages, PWA) ile G1 web kohortu ölçülecek; Pages `main` kökünden yayınlıyor (merge = yayın), analitik uç noktası bekliyor (`STORE.md`).
 > - Bot modeli, analitik verisiyle kalibre edilmeli (R1).
 
 ## 1. Strateji özeti

@@ -18,9 +18,9 @@
 
 **Yurt dışına aktarım (KVKK).** Kullanım verisi ve reklam hizmetleri yurt dışındaki sağlayıcılarda işlenebilir. Aktarım, KVKK'nın 2024 değişikliği kapsamında standart sözleşmeler / uygun güvenceler ile yapılır. Açık rıza yalnızca arızi aktarımlar için kullanılır.
 
-**Silme.** **Ayarlar → İlerlemeyi sıfırla** cihazındaki tüm verileri siler. Sunucuya gönderilmiş kullanım verisinin silinmesi için: `[iletişim e-postası]`.
+**Silme.** **Ayarlar → İlerlemeyi sıfırla** cihazındaki tüm verileri siler. Sunucuya gönderilmiş kullanım verisinin silinmesi için: ergun.efe.ertureten@hotmail.com.
 
-**İletişim.** `[geliştirici adı ve iletişim adresi]`
+**İletişim.** Ergun Efe Ertüreten, ergun.efe.ertureten@hotmail.com
 
 ## English
 
@@ -35,6 +35,6 @@
 
 **Ads.** The web version shows no ads by default. In the store version, only rewarded ads you choose to watch (e.g. "Watch an ad to continue", "2x gems") are served by Google AdMob. Users in the EEA/UK see Google's certified consent form (UMP). Turn off personalised ads in **Settings → Personalised ads**.
 
-**Deletion.** **Settings → Reset progress** erases everything stored on your device. To delete usage data already sent: `[contact e-mail]`.
+**Deletion.** **Settings → Reset progress** erases everything stored on your device. To delete usage data already sent: ergun.efe.ertureten@hotmail.com.
 
-**Contact.** `[developer name and contact address]`
+**Contact.** Ergun Efe Ertüreten, ergun.efe.ertureten@hotmail.com

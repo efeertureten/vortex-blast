@@ -10,7 +10,7 @@ Bir kerelik adımlar:
 1. `dev/roadmap` dalını `main`'e birleştir ve push et. Adres: `https://efeertureten.github.io/vortex-blast/`.
 2. (İsteğe bağlı) Yalnızca `www/` yayınlansın, `docs/` ve `src/` sitede görünmesin istenirse: Source'u **GitHub Actions** yap ve `build_www.py --web` çıktısını `actions/deploy-pages` ile yayınlayan bir iş akışı ekle. Repo zaten herkese açık olduğu için şart değil.
 3. **Yayından önce** doldurulacaklar:
-   - `docs/PRIVACY.md` içindeki `[iletişim e-postası]` ve `[geliştirici adı ve iletişim adresi]` (oyundaki "Gizlilik politikası" linki bu sayfayı açar).
+   - `docs/PRIVACY.md` iletişim bilgisi: dolduruldu (2026-10-27). Oyundaki "Gizlilik politikası" linki `privacy.html`'i açar. Metin hâlâ "taslak, hukuki inceleme gerekir" notunu taşıyor.
    - `config.json` → `analytics.endpoint`: boşsa olaylar yalnızca cihazda kalır ve G1 ölçülemez. Uç nokta `sendBeacon` ile JSON dizisi alan herhangi bir toplayıcı olabilir.
 
 Her sürümde `BUILD` (`src/01-config.js`), `sw.js` `VERSION` ve `package.json` `version` birlikte artırılır; yoksa eski service worker önbelleği kalır.
