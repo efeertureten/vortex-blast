@@ -428,15 +428,16 @@ const sb = $('#statusbar');
 [['Durum', cur ? `${cur.p} · ${cur.name}` : (toStart > 0 ? 'Başlamadı' : 'Plan bitti')],
  ['Başlangıca', toStart > 0 ? `${toStart} gün` : '—'],
  ['Plan bitişi', end],
- ['P0–P4 iş yükü', `${nf1.format(totalEffort)} kişi-gün`],
- ['Backlog', `${D.backlog.length} özellik`]].forEach(([k, v]) => sb.append(h('div', {}, h('div', {class: 'k', text: k}), h('div', {class: 'v num', text: v}))));
+ ['Uygulanan', `${D.backlog.filter(f => /^Uygulandı/.test(f.status)).length}/${D.backlog.length} özellik`],
+ ['Kısmi', `${D.backlog.filter(f => /^Kısmi/.test(f.status)).length}`],
+ ['P0–P4 iş yükü', `${nf1.format(totalEffort)} kişi-gün`]].forEach(([k, v]) => sb.append(h('div', {}, h('div', {class: 'k', text: k}), h('div', {class: 'v num', text: v}))));
 
 const T = (t, cfg, bot) => D.tuning.find(r => r.t === t && r.cfg === cfg && r.bot === bot);
 const PC = (t, bot) => D.progCompare.find(r => r.t === t && r.bot === bot);
 const SIM = (cfg, bot) => D.sim.find(r => r.cfg === cfg && r.bot === bot);
 const comboA = T('AS-BUILT', 'none', 'casual').combo, comboP = T('ÖNERİ', 'none', 'casual').combo;
-$('#ozet-lede').append('Oyunun mevcut hâlinde dört denge sorunu var. Önerilen ayar seti ',
-  h('b', {text: 'üçünü çözüyor'}), ', combo sorunu açık kalıyor. Plan ', h('b', {text: start}), ' Pazartesi başlıyor, ilk iş hile kancasını kapatıp ölçüm altyapısını kurmak.');
+$('#ozet-lede').append('Yol haritasındaki özelliklerin ', h('b', {text: `${D.backlog.filter(f => /^Uygulandı/.test(f.status)).length}/${D.backlog.length}`}),
+  ' tanesi oyunda çalışıyor. Aşağıdaki kartlar uygulamadan önceki dört denge sorununu ve ilk öneri setinin etkisini gösteriyor; uygulanan nihai ayarlar GDD §14\'te. Sıradaki iş gerçek oyuncu verisi: GitHub Pages web yayınıyla G1 ölçümü (deploy hazır; gizlilik iletişim bilgisi ve analitik uç noktası bekliyor), mağaza derlemesi sonra.');
 const F = [
   {cls: 'ok', t: 'Meta ilk oturumda bitiyor', b: PC('AS-BUILT', 'casual').runs, bu: 'run', a: PC('ÖNERİ', 'casual').runs, au: 'run',
    d: `Tüm upgrade'ler ${nf.format(D.upgradeTotal)} gem. Casual oyuncu as-built'te ${nf.format(PC('AS-BUILT', 'casual').minutes)} dakikada hepsini alıyor. Öneriyle ${nf.format(PC('ÖNERİ', 'casual').minutes)} dk. Hedef 100+ run için yeni upgrade'ler de gerekli.`, chip: ['warn', 'Kısmen çözüldü']},
@@ -630,13 +631,15 @@ const blT = table($('#bl-table'), [
   {t: 'Faz', k: 'phase', f: r => phaseChip(r.phase)},
   {t: 'RICE', k: 'rice', r: 1, f: r => h('div', {class: 'ricebar'}, h('i', {style: `width:${Math.round(r.rice / maxRice * 70)}px`}), h('span', {class: 'num', text: nf1.format(r.rice)}))},
   {t: 'Effort', k: 'E', r: 1, f: r => nf1.format(r.E) + ' kg'},
+  {t: 'Durum', k: 'status', f: r => h('span', {class: 'chip ' + (/^Uygulandı/.test(r.status) ? 'ok' : /^Kısmi/.test(r.status) ? 'warn' : ''), title: r.status,
+    text: /^Uygulandı/.test(r.status) ? 'Uygulandı' : /^Kısmi/.test(r.status) ? 'Kısmi' : 'Bekliyor'})},
   {t: 'Bağımlılık', k: 'deps', f: r => r.deps || '—'}],
   D.backlog, {sort: true, sortKey: 'rice', dir: -1,
     filter: r => (!blState.phase || r.phase === blState.phase) && (!blState.cat || r.cat === blState.cat) &&
       (!blState.q || [r.id, r.name, r.cat, r.problem, r.solution, r.kpi, r.touch, r.accept].join(' ').toLocaleLowerCase('tr').includes(blState.q)),
     onRow: (r, n) => {
       const dl = h('dl');
-      [['Problem', r.problem], ['Çözüm', r.solution], ['KPI', r.kpi],
+      [['Durum', r.status], ['Problem', r.problem], ['Çözüm', r.solution], ['KPI', r.kpi],
        ['RICE', `R ${r.R} × I ${r.I} × C %${r.C} ÷ E ${r.E} = ${nf1.format(r.rice)}`],
        ['Kabul kriterleri', r.accept], ['Kod alanları', r.touch], ['Risk', r.risk]]
         .forEach(([k, v]) => dl.append(h('dt', {text: k}), h('dd', {text: v || '—'})));

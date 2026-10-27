@@ -46,6 +46,7 @@ const STR = {
   dataQ: ['Help improve Vortex Blast?', 'Vortex Blast\'ı geliştirmemize yardım eder misin?'],
   dataBody: ['Share anonymous gameplay statistics. You can change this any time in Settings.', 'Anonim oyun istatistiklerini paylaş. Bunu Ayarlar\'dan istediğin zaman değiştirebilirsin.'],
   yesShare: ['Yes, share', 'Evet, paylaş'], noThanks: ['No thanks', 'Hayır, teşekkürler'],
+  privacy: ['Privacy policy', 'Gizlilik politikası'],
   'ftue.0': ['Tap the glowing group!', 'Parlayan gruba dokun!'],
   'ftue.1': ['Same colours also link ACROSS rings when they line up', 'Aynı renkler hizalanınca halkalar ARASINDA da bağlanır'],
   'ftue.1b': ['Wait for a line-up, then tap it', 'Hizalanmayı bekle, sonra dokun'],

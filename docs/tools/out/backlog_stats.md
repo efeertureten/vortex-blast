@@ -70,4 +70,6 @@
 | F-007 | Reduced motion + sarsıntı/flash/haptik kapatma | 4.0 | 1 | P1 |
 | F-036 | Remote config + A/B atama | 4.0 | 2 | P0 |
 
+**Uygulama durumu:** 41/44 uygulandı, 3 kısmi.
+
 Kategori sayısı: 15 — Analytics & deney, Booster/power-up, Core loop & zorluk, Erişilebilirlik, FTUE & UX, Juice/Audio/Müzik, Lokalizasyon, Meta & ekonomi, Modlar, Monetizasyon, Retention/LiveOps, Sosyal, Teknik/Platform, Uyumluluk, Yeni blok/engel türleri

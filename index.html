@@ -359,6 +359,7 @@ const STR = {
   dataQ: ['Help improve Vortex Blast?', 'Vortex Blast\'ı geliştirmemize yardım eder misin?'],
   dataBody: ['Share anonymous gameplay statistics. You can change this any time in Settings.', 'Anonim oyun istatistiklerini paylaş. Bunu Ayarlar\'dan istediğin zaman değiştirebilirsin.'],
   yesShare: ['Yes, share', 'Evet, paylaş'], noThanks: ['No thanks', 'Hayır, teşekkürler'],
+  privacy: ['Privacy policy', 'Gizlilik politikası'],
   'ftue.0': ['Tap the glowing group!', 'Parlayan gruba dokun!'],
   'ftue.1': ['Same colours also link ACROSS rings when they line up', 'Aynı renkler hizalanınca halkalar ARASINDA da bağlanır'],
   'ftue.1b': ['Wait for a line-up, then tap it', 'Hizalanmayı bekle, sonra dokun'],
@@ -2214,6 +2215,12 @@ function panelBox(x, y, w, h, title) {
   if (title) txtFit(title, x + w / 2, y + 40, w - 120, { size: 34, stroke: '#1d0840', sw: 7 });
 }
 function closeX(x, y, fn) { roundButton('close', x, y, 20, ICON.close, fn || closeModal); }
+// small underlined text that opens the privacy policy page shipped next to index.html (F-033)
+function privacyLink(x, y) {
+  txt(t('privacy'), x, y, { size: 15, font: FB, weight: 700, color: '#b9a8ff' });
+  ctx.fillStyle = 'rgba(185,168,255,0.6)'; ctx.fillRect(x - 70, y + 10, 140, 1.5);
+  hit({ x: x - 110, y: y - 16, w: 220, h: 34 }, () => { Snd.click(); try { window.open('privacy.html', '_blank', 'noopener'); } catch (e) {} }, 'privacy');
+}
 // a settings-style row: label left, control right; whole row is the tap target
 function toggleRow(id, x, y, w, label, on, fn) {
   txtFit(label, x + 16, y + 24, w - 120, { size: 18, font: FB, weight: 600, align: 'left', color: '#fff' });
@@ -2667,7 +2674,7 @@ const MODALS = {
       rows.push(['t', 'an', t('analytics'), save.consent.analytics, () => { save.consent.analytics = !save.consent.analytics; save.consent.ts = new Date().toISOString(); persist(); }]);
       rows.push(['t', 'ads', t('adsPersonal'), save.consent.ads, () => { save.consent.ads = !save.consent.ads; save.consent.ts = new Date().toISOString(); persist(); }]);
     }
-    const h = 110 + rows.length * 52 + 74, y = Math.max(70, (H - h) / 2 - 20);
+    const h = 110 + rows.length * 52 + 102, y = Math.max(70, (H - h) / 2 - 20);
     panelBox(x, y, w, h, t('settings'));
     closeX(x + w - 34, y + 36);
     rows.forEach((r, i) => {
@@ -2683,6 +2690,7 @@ const MODALS = {
       try { localStorage.removeItem(SAVE_KEY); localStorage.removeItem('vortexBlast.q'); } catch (e) {}
       location.reload();
     });
+    privacyLink(x + w / 2, y + h - 42);
     txt(t('version', { v: BUILD }) + (variantsKey() ? '  •  ' + variantsKey() : ''), x + w / 2, y + h - 14, { size: 12, font: FB, weight: 600, color: 'rgba(255,255,255,0.4)' });
   },
   consent(m) {
@@ -2703,6 +2711,7 @@ const MODALS = {
       uiButton('yes', { x: 110, y: 470, w: 320, h: 60 }, t('yesShare'), { size: 24 }, () => { save.consent.analytics = true; save.consent.ads = true; finishConsent(); });
       uiButton('no', { x: 110, y: 548, w: 320, h: 54 }, t('noThanks'), { size: 21, c1: '#8a7bb8', c2: '#4b3c7a' }, () => { save.consent.analytics = false; save.consent.ads = false; finishConsent(); });
     }
+    privacyLink(270, 650);
   },
   daily() {
     panelBox(40, 200, 460, 520, t('dailyTitle'));

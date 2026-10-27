@@ -34,12 +34,15 @@ Keys: **Space** play / resume · **P** or **Esc** pause · **U** upgrades · **M
 The code lives in `src/` (one file per section); `index.html` is built from it.
 
 ```bash
-python tools/build.py            # src/ → index.html
-python tools/build.py --check    # is index.html up to date?
+python tools/build.py            # src/ → index.html, docs/PRIVACY.md → privacy.html
+python tools/build.py --check    # are both up to date?
 python docs/tools/smoke.py       # headless-Chrome tests of the real game
 python docs/tools/parity.py      # game ↔ balance-model parity
+python tools/build_www.py --web  # www/ = the shipped files only (adds sw.js); used for the store build
 ```
 
-Balance numbers come from a Python port of the game rules (`docs/tools/vb_model.py`). See `docs/README.md` for the design docs and `docs/STORE.md` for store builds.
+GitHub Pages serves the root of `main` (https://efeertureten.github.io/vortex-blast/), so pushing to `main` is the web release; `.github/workflows/check.yml` verifies the committed build.
+
+Balance numbers come from a Python port of the game rules (`docs/tools/vb_model.py`). See `docs/README.md` for the design docs and `docs/STORE.md` for web and store builds.
 
 Fonts: Fredoka and Lilita One, SIL Open Font License, see `fonts-LICENSE.txt`.

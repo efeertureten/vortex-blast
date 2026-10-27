@@ -116,6 +116,12 @@ function panelBox(x, y, w, h, title) {
   if (title) txtFit(title, x + w / 2, y + 40, w - 120, { size: 34, stroke: '#1d0840', sw: 7 });
 }
 function closeX(x, y, fn) { roundButton('close', x, y, 20, ICON.close, fn || closeModal); }
+// small underlined text that opens the privacy policy page shipped next to index.html (F-033)
+function privacyLink(x, y) {
+  txt(t('privacy'), x, y, { size: 15, font: FB, weight: 700, color: '#b9a8ff' });
+  ctx.fillStyle = 'rgba(185,168,255,0.6)'; ctx.fillRect(x - 70, y + 10, 140, 1.5);
+  hit({ x: x - 110, y: y - 16, w: 220, h: 34 }, () => { Snd.click(); try { window.open('privacy.html', '_blank', 'noopener'); } catch (e) {} }, 'privacy');
+}
 // a settings-style row: label left, control right; whole row is the tap target
 function toggleRow(id, x, y, w, label, on, fn) {
   txtFit(label, x + 16, y + 24, w - 120, { size: 18, font: FB, weight: 600, align: 'left', color: '#fff' });

@@ -3,6 +3,13 @@
 > Başlangıç **2026-11-02 (Pazartesi)** · Ekip `[VARSAYIM]`: 1 geliştirici + Claude Code, 20 sa/hafta = **2,5 kişi-gün/hafta** · Tampon ×1,2.
 > Takvim ve kapasite tablosu `tools/backlog.py` ile üretilir. Feature ID'leri `02_FEATURE_BACKLOG.md` ile aynıdır.
 
+> **Durum (2026-10-26):** P0–P4 ve "Later" kapsamındaki özelliklerin kodu planlanandan erken tamamlandı. 44 özelliğin 41'i uygulandı, 3'ü kısmi; ayrıntılar `02_FEATURE_BACKLOG.md` Durum sütununda ve GDD §14'te.
+>
+> Takvim artık **ölçüm** için geçerli, geliştirme için değil:
+> - G1 (web kohortu) ve G2 (Android soft-launch) kapıları gerçek oyuncu verisi ister.
+> - Mağaza derlemesi (F-031) bu makinede yapılamıyor (Node.js, Android Studio yok). Önce **web yayını** (GitHub Pages, PWA) ile G1 web kohortu ölçülecek; Pages `main` kökünden yayınlıyor (merge = yayın), gizlilik iletişim bilgisi ve analitik uç noktası bekliyor (`STORE.md`).
+> - Bot modeli, analitik verisiyle kalibre edilmeli (R1).
+
 ## 1. Strateji özeti
 
 **Kuzey yıldızı metrik:** **D7 retention**. Hybrid-casual'da hem retention hem gelir bu metriğe bağlı `[ARAŞTIRMA S4]`. Hedef ≥ %10 (00_RESEARCH §5 çıpası).
@@ -216,9 +223,9 @@ flowchart LR
 ### Sprint 2 — 2026-11-16 → 2026-11-29 (hedef 4,2 kişi-gün)
 | # | Görev | Feature | Dosya / fonksiyon | Tahmin | Bitti tanımı | Durum |
 |---|---|---|---|---:|---|---|
-| 2.1 | `Track` modülü: kuyruk, `localStorage` tamponu (≤ 200), `navigator.sendBeacon` ile 30 sn'de bir/`pagehide`. Endpoint boşsa yalnızca yerel. Consent bayrağı `save.consent.analytics` | F-001 | yeni `Track` (Snd'nin altına) | 1,5 | Event'ler `localStorage['vb.q']`'da görünüyor. Frame süresine etkisi < 0,2 ms | Bekliyor |
-| 2.2 | 14 event'in tetik noktalarına eklenmesi (GDD §10.1) | F-001 | `startGame`, `doBlast`, `doBomb`, `waveUp`, `gameOver`, `buy`, `toggleDrawer`, `perfWatch`, `visibilitychange` | 1,5 | Debug overlay'de event sayaçları | Bekliyor |
-| 2.3 | Parity testi: aynı seed ile JS'te 50 `settle` sonrası grid renkleri ↔ `vb_model.py` | F-035 (2/2) | `docs/tools/parity.py`, `window.__vortex` (debug) | 1,0 | Fark 0 | Bekliyor |
-| 2.4 | Sprint 3 hazırlığı: `drainRate`, `doBomb`, `COMBO_WINDOW`, `waveScore` kontrolünü `CFG` nesnesine taşı (remote config'in ön adımı, davranış değişmez) | F-036 hazırlık | config bölümü | 0,25 | As-built davranış birebir (smoke testi) | Bekliyor |
+| 2.1 | `Track` modülü: kuyruk, `localStorage` tamponu (≤ 200), `navigator.sendBeacon` ile 30 sn'de bir/`pagehide`. Endpoint boşsa yalnızca yerel. Consent bayrağı `save.consent.analytics` | F-001 | yeni `Track` (Snd'nin altına) | 1,5 | Event'ler `localStorage['vb.q']`'da görünüyor. Frame süresine etkisi < 0,2 ms | Bitti 2026-10-26 |
+| 2.2 | 14 event'in tetik noktalarına eklenmesi (GDD §10.1) | F-001 | `startGame`, `doBlast`, `doBomb`, `waveUp`, `gameOver`, `buy`, `toggleDrawer`, `perfWatch`, `visibilitychange` | 1,5 | Debug overlay'de event sayaçları | Bitti 2026-10-26 |
+| 2.3 | Parity testi: aynı seed ile JS'te 50 `settle` sonrası grid renkleri ↔ `vb_model.py` | F-035 (2/2) | `docs/tools/parity.py`, `window.__vortex` (debug) | 1,0 | Fark 0 | Bitti 2026-10-26 |
+| 2.4 | Sprint 3 hazırlığı: `drainRate`, `doBomb`, `COMBO_WINDOW`, `waveScore` kontrolünü `CFG` nesnesine taşı (remote config'in ön adımı, davranış değişmez) | F-036 hazırlık | config bölümü | 0,25 | As-built davranış birebir (smoke testi) | Bitti 2026-10-26 |
 
 **Sprint 3 (2026-11-30 → 12-13):** F-036 (remote config + A/B, 2 kg) ve F-019 (PROPOSED tuning'in `CFG`'ye uygulanması + model regresyonu, 2 kg). Sonunda G0 kapısı.

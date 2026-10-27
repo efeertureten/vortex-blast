@@ -9,8 +9,10 @@ Yalnızca Python 3 standart kütüphanesi kullanılır, paket kurulumu gerekmez 
 | `vb_proposed.py` | AS-BUILT ile ÖNERİ tuning karşılaştırması (GDD §3.5) | `out/tuning_compare.md`, `progression_compare.md` | ~5–10 dk |
 | `backlog.py` | Backlog'un tek kaynağı: RICE, sıralama, quick wins, faz kapasitesi, gantt | `../feature_backlog.csv`, `out/backlog_table.md`, `backlog_stats.md`, `capacity.md`, `gantt.md` | < 1 sn |
 | `build_docs.py` | `docs/*.md` içindeki `<!-- INCLUDE:out/... -->` bloklarını çıktılarla doldurur. `--check` ile fark varsa hata verir | docs/*.md | < 1 sn |
-
-| `smoke.py` | Oyunu headless Chrome'da 5 senaryoyla çalıştırır: temiz kurulum + blast + RNG determinizmi, v1 → v2 migration, bozuk kayıt, gelecek sürüm, üretimde test kancası yok. Hata varsa exit 1 | konsol | ~30 sn |
+| `vb_final.py` | Uygulanan nihai dengenin (FINAL) doğrulaması, içerik açık/kapalı (GDD §14.2) | `out/final_runs.md`, `final_progression.md` | dakikalar |
+| `smoke.py` | Oyunu headless Chrome'da 11 senaryoyla çalıştırır (GDD §14.4): consent, migration, bozuk/sahte kayıt, paneller, booster, pause/quit, zen, revive, prizma/kilit, Daily Challenge. Hata varsa exit 1 | konsol | ~30 sn |
+| `parity.py` | Aynı seed'de oyun (JS) ile `vb_model` arasında 5 settle senaryosunun birebir eşitliği | konsol | saniyeler |
+| `shots.py` | 15 ekranın EN/TR ekran görüntüsü | görüntüler | saniyeler |
 | `build_dashboard.py` | Tüm çıktıları ve docs tablolarını okuyup tek sayfalık `../dashboard.html` üretir (şablon: `dashboard_template.html`) | `../dashboard.html` | < 1 sn |
 
 Tam yeniden üretim:

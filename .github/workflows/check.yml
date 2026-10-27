@@ -1,0 +1,21 @@
+# GitHub Pages serves the repo root of main ("Deploy from a branch"), so whatever is committed is the web
+# release. This only checks that the committed index.html and privacy.html match src/ and docs/PRIVACY.md.
+name: Check build
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: index.html and privacy.html match their sources
+        run: python tools/build.py --check

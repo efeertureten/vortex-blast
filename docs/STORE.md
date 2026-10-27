@@ -3,7 +3,19 @@
 > **Durum:** Proje iskeleti hazır (`package.json`, `capacitor.config.json`, `tools/build_www.py`, ikonlar, AdMob/UMP kodu `index.html` → `Ads`).
 > **Bu repoda derlenmedi ve test edilmedi:** geliştirme makinesinde Node.js/npm, Android Studio ve Xcode yoktu. Aşağıdaki adımlar standart Capacitor akışıdır. İlk derlemede sürümlerin (`^7.0.0`) güncel olduğunu kontrol et.
 
-## Gereksinimler
+## Web yayını (GitHub Pages, PWA) — G1 web kohortu
+Mağazadan önce ölçüm için web sürümü. GitHub Pages `main` dalının kökünü yayınlar (Settings → Pages → **Deploy from a branch**, `main` / root; zaten açık). Yani `main`'e push edilen `index.html`, `privacy.html`, `sw.js`, manifest, ikonlar ve `config.json` doğrudan yayına girer. `python tools/build.py` hem `index.html`'i hem `docs/PRIVACY.md`'den `privacy.html`'i üretir; ikisi de commit edilir. `.github/workflows/check.yml` her push'ta `build.py --check` çalıştırır.
+
+Bir kerelik adımlar:
+1. `dev/roadmap` dalını `main`'e birleştir ve push et. Adres: `https://efeertureten.github.io/vortex-blast/`.
+2. (İsteğe bağlı) Yalnızca `www/` yayınlansın, `docs/` ve `src/` sitede görünmesin istenirse: Source'u **GitHub Actions** yap ve `build_www.py --web` çıktısını `actions/deploy-pages` ile yayınlayan bir iş akışı ekle. Repo zaten herkese açık olduğu için şart değil.
+3. **Yayından önce** doldurulacaklar:
+   - `docs/PRIVACY.md` içindeki `[iletişim e-postası]` ve `[geliştirici adı ve iletişim adresi]` (oyundaki "Gizlilik politikası" linki bu sayfayı açar).
+   - `config.json` → `analytics.endpoint`: boşsa olaylar yalnızca cihazda kalır ve G1 ölçülemez. Uç nokta `sendBeacon` ile JSON dizisi alan herhangi bir toplayıcı olabilir.
+
+Her sürümde `BUILD` (`src/01-config.js`), `sw.js` `VERSION` ve `package.json` `version` birlikte artırılır; yoksa eski service worker önbelleği kalır.
+
+## Gereksinimler (mağaza)
 - Node.js 20+ ve npm
 - Android: Android Studio (SDK 34+)
 - iOS: macOS + Xcode 15+ ve CocoaPods

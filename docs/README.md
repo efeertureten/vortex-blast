@@ -1,6 +1,8 @@
 # Vortex Blast — Ürün dokümanları
 
-> Hazırlanma: 2026-10-26 · Dil: Türkçe (oyun/ürün terimleri İngilizce) · Oyun kodu (`index.html`, `README.md`) bu çalışmada değiştirilmedi.
+> Hazırlanma: 2026-10-26 · Dil: Türkçe (oyun/ürün terimleri İngilizce)
+>
+> **Durum (2026-10-26, dal `dev/roadmap`):** 44 özelliğin 41'i uygulandı, 3'ü kısmi (F-012, F-031, F-040). Kod `src/` altında, `python tools/build.py` ile `index.html`'e derleniyor. Sıradaki iş: web yayını (GitHub Pages) ile G1 ölçümü; mağaza derlemesi (F-031) araçlar kurulunca. Bkz. `STORE.md`. Ayrıntı: GDD §14.
 
 ## Okuma sırası
 1. **[01_GDD.md](01_GDD.md) §1**: yönetici özeti ve 4 kritik bulgu (5 dk)
@@ -13,9 +15,12 @@
 | Dosya | İçerik |
 |---|---|
 | `00_RESEARCH.md` | Yönetici özeti (15 madde), bulgular, 31 kaynaklı kaynak tablosu |
-| `01_GDD.md` | 13 bölüm + 5 ADR + Ek A/B/C |
+| `01_GDD.md` | 14 bölüm (§14 uygulama durumu ve nihai denge) + 5 ADR + Ek A/B/C |
 | `02_FEATURE_BACKLOG.md` | 44 özellik, RICE, Top 10, quick wins, anti-features |
 | `03_ROADMAP.md` | P0–P4 (+Later), gantt, bağımlılık grafiği, Go/No-Go, risk register, Sprint 1–2 |
+| `STORE.md` | Web yayını (GitHub Pages) ve Capacitor mağaza paketi adımları, kontrol listesi (F-031) |
+| `PRIVACY.md` | Gizlilik politikası taslağı TR/EN (F-033) |
+| `dashboard.html` | Tek ekran kontrol paneli (`tools/build_dashboard.py` ile üretilir) |
 | `feature_backlog.csv` | Backlog'un CSV hâli (UTF-8 BOM, Excel uyumlu). `02`'deki tabloyla birebir aynı |
 | `tools/` | Python oynanış modeli, analiz, backlog ve doküman derleme scriptleri ile çıktıları |
 
@@ -44,9 +49,4 @@
 6. KVKK–GDPR uyumlaştırmasının (2026 Q3 bekleniyordu) güncel durumu. Kaynak 2025 tarihli.
 
 ## Önemli not: as-built referansı
-GDD'deki `[AS-BUILT]` bilgiler, `index.html`'in commit `89f79ff` artı çalışma ağacındaki **commit edilmemiş** performans değişikliklerini içeren sürümüne aittir:
-- Sprite cache
-- Haptik
-- `queueResize`
-
-Bu değişiklikler bu doküman çalışmasından önce yapıldı. Bu çalışmada `index.html` ve `README.md`'ye dokunulmadı. Çalışmanın başında ve sonunda SHA-256 ile doğrulandı (`index.html` öneki `0BDBD034B1FBDB3A`).
+GDD §1–13'teki `[AS-BUILT]` bilgiler, ilk doküman çalışması sırasındaki `index.html`'e (commit `89f79ff` + sprite cache, haptik, `queueResize`) aittir. O sürümün SHA-256 öneki `0BDBD034B1FBDB3A`. Oyun o zamandan beri roadmap'e göre değişti (commit `44a05b7`, `570e708`); güncel davranış ve uygulanan nihai denge GDD §14'te.

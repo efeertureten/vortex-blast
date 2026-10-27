@@ -119,7 +119,7 @@ for r in csv.DictReader(open(os.path.join(DOCS, 'feature_backlog.csv'), encoding
                              solution=r['Çözüm özeti'], kpi=r['Etkilediği KPI'], R=num(r['Reach']), I=num(r['Impact']),
                              C=num(r['Confidence']), E=num(r['Effort (kişi-gün)']), rice=num(r['RICE']),
                              deps=r['Bağımlılıklar'], risk=r['Risk'], accept=r['Kabul kriterleri'],
-                             touch=r['Dokunulacak fonksiyonlar/alanlar'], phase=r['Faz']))
+                             touch=r['Dokunulacak fonksiyonlar/alanlar'], phase=r['Faz'], status=r.get('Durum', '')))
 
 road = read(DOCS, '03_ROADMAP.md')
 cap = out_table('capacity.md')

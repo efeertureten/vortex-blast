@@ -2,6 +2,7 @@
 
 > Sürüm 1.0 · 2026-10-26 · Kapsam: as-built denetimi + önerilen tasarım
 > Etiketler: `[AS-BUILT]` koddan doğrulandı (fonksiyon/sabit adıyla) · `[ÖNERİ]` yeni tasarım · `[ARAŞTIRMA S#]` → `00_RESEARCH.md` · `[VARSAYIM]` doğrulanamadı.
+> **Not (2026-10-26, sonra):** Bu dokümandaki önerilerin tamamı uygulandı. Uygulanan nihai değerler ve doğrulama sonuçları **§14**'te. §1–13'teki `[AS-BUILT]` etiketleri, uygulama öncesi oyunu tarif eder.
 > **As-built referansı:** `index.html` = commit `89f79ff` + çalışma ağacındaki commit edilmemiş performans değişiklikleri (sprite cache `buildBlockSprites`, `buzz` haptik, `queueResize`). 1442 satır, SHA-256 öneki `0BDBD034B1FBDB3A`.
 > Sayısal tablolar `docs/tools/` scriptlerinin çıktısıdır (Ek C). Elle yazılmamıştır.
 
@@ -678,6 +679,79 @@ Bu bölüm hukuki tavsiye değildir. P3 öncesinde hukuki inceleme yapılmalı `
 5. Combo penceresi küçülünce juice hissi azalır mı? E2 deneyi.
 
 ---
+
+## 14. Uygulama durumu (2026-10-26, dal `dev/roadmap`)
+
+Backlog'daki 44 özelliğin 41'i oyunda çalışıyor, 3'ü kısmi (F-012, F-031, F-040; ayrıntı `02_FEATURE_BACKLOG.md` Durum sütunu). Kod `src/` altında, `python tools/build.py` ile tek `index.html`'e derleniyor.
+
+### 14.1 Uygulanan nihai denge (FINAL) `[AS-BUILT]`
+§3.5'teki öneriden farkları, iki doğrulama turunda modelle belirlendi:
+
+| Parametre | Öneri (§3.5) | Uygulanan | Neden |
+|---|---|---|---|
+| Combo penceresi | 1,3 sn sabit | `max(0,7; 1,8 − 0,12·(combo−1))` | Sabit 1,3 sn combo'yu hiç koparmadı (T5). Daralan pencerede medyan max combo novice/casual/skilled = 6/10/25 |
+| Gem oranı | ×0,15 | ×0,13 | 6 upgrade için casual ≥ 100 run hedefi (tur 1: 76,5 run) |
+| Boost'un gem etkisi | ×(1+0,25·l) | ×(1+0,125·l) | Boost gem gelirini ×3,5'e katlayıp metayı hızlandırıyordu. Skor çarpanı aynı kaldı |
+| Kilitli blok oranı | %6 + %0,5/dalga (tavan %12), boss ×2 | %5 + %0,3/dalga (tavan %9), boss ×1,5 | Tur 1'de içerik skilled run'larını %19–27 kısalttı (kriter ±%15) |
+| Yeni upgrade maliyetleri | 60·1,7^l / 80·1,6^l / 100·1,75^l | 80·1,8^l / 100·1,7^l / 120·1,8^l | Meta süresi |
+| Prizma/kilit zarı | — | Kilit yalnızca zar ≥ prizma şansı iken | Dalga 1–2'de %2 yanlış kilit çıkıyordu (parite testi sırasında bulundu; JS ve modelde düzeltildi) |
+
+### 14.2 Doğrulama (script: `vb_final.py`)
+Tur 1 (`out/final_runs_r1.md`, `out/final_progression_r1.md`) yukarıdaki ayarları gerektirdi. Tur 2 sonuçları:
+
+<!-- INCLUDE:out/final_runs.md -->
+| İçerik | Upgrade | Bot | Süre sn medyan (p10–p90) | Fark (içerik açık/kapalı) | 900 sn tavanı | Dalga medyan | Gem/run | Max combo | Joker/run | Kilitli/run | Renk bombası/run | Boss geçildi/run |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| kapalı | none | novice | 89 (69–107) | — | 0% | 6 | 16.9 | 6 | 0.0 | 0.0 | 0.0 | 0.0 |
+| kapalı | none | casual | 144 (119–165) | — | 0% | 12 | 47.2 | 10 | 0.0 | 0.0 | 0.0 | 0.0 |
+| kapalı | none | skilled | 277 (240–343) | — | 0% | 26 | 188.2 | 22.5 | 0.0 | 0.0 | 0.0 | 0.0 |
+| kapalı | mid | novice | 95 (81–107) | — | 0% | 8 | 36.0 | 7 | 0.0 | 0.0 | 0.0 | 0.0 |
+| kapalı | mid | casual | 135 (115–151) | — | 0% | 14 | 87.4 | 11 | 0.0 | 0.0 | 0.0 | 0.0 |
+| kapalı | mid | skilled | 342 (295–367) | — | 0% | 36 | 431.4 | 39.5 | 0.0 | 0.0 | 0.0 | 0.0 |
+| kapalı | max | novice | 85 (72–104) | — | 0% | 9 | 54.2 | 9 | 0.0 | 0.0 | 0.0 | 0.0 |
+| kapalı | max | casual | 122 (104–143) | — | 0% | 16 | 137.0 | 13 | 0.0 | 0.0 | 0.0 | 0.0 |
+| kapalı | max | skilled | 315 (261–360) | — | 0% | 42 | 673.2 | 509 | 0.0 | 0.0 | 0.0 | 0.0 |
+| açık | none | novice | 94 (79–113) | +7% | 0% | 7 | 21.5 | 6 | 5.9 | 15.7 | 2.9 | 1.0 |
+| açık | none | casual | 134 (94–165) | -7% | 0% | 11 | 49.2 | 10 | 15.5 | 53.6 | 7.7 | 1.9 |
+| açık | none | skilled | 243 (182–305) | -12% | 0% | 25 | 165.6 | 24 | 52.0 | 255.7 | 27.8 | 4.3 |
+| açık | mid | novice | 88 (75–105) | -7% | 0% | 8 | 37.7 | 7 | 6.9 | 21.1 | 4.5 | 1.0 |
+| açık | mid | casual | 121 (106–152) | -10% | 0% | 14 | 89.8 | 11 | 18.1 | 71.6 | 13.6 | 2.1 |
+| açık | mid | skilled | 262 (228–291) | -23% | 0% | 34 | 361.6 | 37 | 76.4 | 401.6 | 70.3 | 4.9 |
+| açık | max | novice | 84 (68–100) | -1% | 0% | 9.5 | 56.4 | 9 | 8.0 | 25.7 | 5.7 | 1.1 |
+| açık | max | casual | 107 (88–133) | -13% | 0% | 17 | 132.4 | 14 | 17.9 | 83.9 | 18.7 | 2.4 |
+| açık | max | skilled | 231 (198–272) | -27% | 0% | 44.5 | 609.2 | 370.5 | 82.3 | 487.3 | 127.2 | 5.5 |
+
+Upgrade setleri: none = hepsi 0; mid = magnet 2, bomb 1, mult 4, combo 1, shield 1, harmony 1; max = hepsi maksimum. Bot başına 60 run (skilled 20), tohum 2000+.
+<!-- /INCLUDE -->
+
+<!-- INCLUDE:out/final_progression.md -->
+| Bot | İlk 3 upgrade maks. (run) | 6 upgrade maks. (run) | Toplam oyun süresi |
+|---|---:|---:|---:|
+| novice | 284 | **284** | 408 dk (6.8 sa) |
+| casual | 119.5 | **119.5** | 230 dk (3.8 sa) |
+
+6 upgrade toplam maliyeti: 12,821 gem. 4 tohum; politika: her run sonu en ucuz alınabilir upgrade `[VARSAYIM]`.
+<!-- /INCLUDE -->
+
+**Kabul kriterlerinin durumu:**
+- **İçeriğin run süresine etkisi:** ±%15 kriteri novice ve casual için her upgrade seviyesinde, skilled için upgrade'siz durumda sağlanıyor.
+  - Upgrade'li skilled oyuncuda içerik run'ı daha çok kısaltıyor.
+  - Ama bu oyuncu içerik kapalıyken 315–342 sn ile §5.1'deki 150–300 sn bandının dışındaydı; içerik onu bandın içine çekiyor. Bilinçli olarak kabul edildi.
+- **Combo Timer:** maksimum seviyede skilled bot combo'yu neredeyse hiç koparmıyor. Bu, yatırımın ödülü olarak kabul edildi.
+
+### 14.3 ADR-2 güncellemesi (F-034)
+Karar "native ES modules" yerine **bölüm dosyaları + derleme** oldu: `src/NN-bölüm.js` dosyaları `tools/build.py` ile tek script'e birleştiriliyor (bundler yok, Python standart kütüphane).
+
+Gerekçe:
+- ES modules `file://` altında çalışmıyor, yani "dosyayı aç ve oyna" dağıtımını bozuyordu.
+- Bu ortamda Node.js yok.
+
+Bölme bayt bayt kayıpsız doğrulandı (`build.py --check`).
+
+### 14.4 Test
+- `docs/tools/smoke.py`, 11 senaryo, headless Chrome: ilk açılış ve consent, migration, bozuk ve sahte kayıt, tüm paneller, booster, pause/resume/quit, zen, revive (mock reklam), prizma ve kilit kümeleri, Daily Challenge tahtası.
+- `docs/tools/parity.py`: aynı seed'de oyun ile model arasında 5 settle senaryosu birebir aynı.
+- `docs/tools/shots.py`: 15 ekranın EN/TR görüntüsü.
 
 ## Ek A — As-built sabitler ve formüller
 

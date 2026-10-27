@@ -27,7 +27,7 @@ const MODALS = {
       rows.push(['t', 'an', t('analytics'), save.consent.analytics, () => { save.consent.analytics = !save.consent.analytics; save.consent.ts = new Date().toISOString(); persist(); }]);
       rows.push(['t', 'ads', t('adsPersonal'), save.consent.ads, () => { save.consent.ads = !save.consent.ads; save.consent.ts = new Date().toISOString(); persist(); }]);
     }
-    const h = 110 + rows.length * 52 + 74, y = Math.max(70, (H - h) / 2 - 20);
+    const h = 110 + rows.length * 52 + 102, y = Math.max(70, (H - h) / 2 - 20);
     panelBox(x, y, w, h, t('settings'));
     closeX(x + w - 34, y + 36);
     rows.forEach((r, i) => {
@@ -43,6 +43,7 @@ const MODALS = {
       try { localStorage.removeItem(SAVE_KEY); localStorage.removeItem('vortexBlast.q'); } catch (e) {}
       location.reload();
     });
+    privacyLink(x + w / 2, y + h - 42);
     txt(t('version', { v: BUILD }) + (variantsKey() ? '  •  ' + variantsKey() : ''), x + w / 2, y + h - 14, { size: 12, font: FB, weight: 600, color: 'rgba(255,255,255,0.4)' });
   },
   consent(m) {
@@ -63,6 +64,7 @@ const MODALS = {
       uiButton('yes', { x: 110, y: 470, w: 320, h: 60 }, t('yesShare'), { size: 24 }, () => { save.consent.analytics = true; save.consent.ads = true; finishConsent(); });
       uiButton('no', { x: 110, y: 548, w: 320, h: 54 }, t('noThanks'), { size: 21, c1: '#8a7bb8', c2: '#4b3c7a' }, () => { save.consent.analytics = false; save.consent.ads = false; finishConsent(); });
     }
+    privacyLink(270, 650);
   },
   daily() {
     panelBox(40, 200, 460, 520, t('dailyTitle'));

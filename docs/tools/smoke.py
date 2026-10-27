@@ -221,6 +221,7 @@ def checks(name, r, results):
 
 
 def main():
+    sys.stdout.reconfigure(errors='replace')   # labels contain → etc.; don't crash on cp1254/cp1252 consoles
     if not CHROME:
         print('Chrome/Edge not found; set CHROME=<path>'); return 2
     failed = 0; results = {}
